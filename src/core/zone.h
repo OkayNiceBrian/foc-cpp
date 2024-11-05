@@ -23,19 +23,19 @@ struct Zone {
     void setRect(int screenWidth, int screenHeight) {
         switch (this->zoneNum) {
             case Zones::Zone1:
-                this->rect = Rectangle(screenWidth / 2 + zoneMargin / 2, screenHeight / 2 + zoneMargin / 2, screenWidth / 2 - zoneMargin, screenHeight / 2 - zoneMargin);
+                this->rect = Rectangle(screenWidth / 2 + zoneMargin / 2, screenHeight / 2 + zoneMargin / 2, screenWidth / 2.5 - zoneMargin, screenHeight / 2 - zoneMargin);
                 this->color = ColorAlpha(Color(100, 0, 250), .4);
                 break;
             case Zones::Zone2:
-                this->rect = Rectangle(zoneMargin / 2, screenHeight / 2 + zoneMargin / 2, screenWidth / 2 - zoneMargin, screenHeight / 2 - zoneMargin);
+                this->rect = Rectangle(screenWidth / 10 + zoneMargin / 2, screenHeight / 2 + zoneMargin / 2, screenWidth / 2.5 - zoneMargin, screenHeight / 2 - zoneMargin);
                 this->color = ColorAlpha(Color(100, 0, 250), .4);
                 break;
             case Zones::Zone3:
-                this->rect = Rectangle(zoneMargin / 2, zoneMargin / 2, screenWidth / 2 - zoneMargin, screenHeight / 2 - zoneMargin);
+                this->rect = Rectangle(screenWidth / 10 + zoneMargin / 2, zoneMargin / 2, screenWidth / 2.5 - zoneMargin, screenHeight / 2 - zoneMargin);
                 this->color = ColorAlpha(Color(250, 0, 100), .4);
                 break;
             case Zones::Zone4:
-                this->rect = Rectangle(screenWidth / 2 + zoneMargin / 2, zoneMargin / 2, screenWidth / 2 - zoneMargin, screenHeight / 2 - zoneMargin);
+                this->rect = Rectangle(screenWidth / 2 + zoneMargin / 2, zoneMargin / 2, screenWidth / 2.5 - zoneMargin, screenHeight / 2 - zoneMargin);
                 this->color = ColorAlpha(Color(250, 0, 100), .4);
                 break;
         }

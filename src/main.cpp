@@ -12,11 +12,13 @@ using namespace std;
 
 int main()
 {
-
     // Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 1920;
     const int screenHeight = 1080;
+
+    bool isHoveringCard = false;
+    Card *hoveredCard;
     
     bool holdingCard = false;
     Card *heldCard;
@@ -24,11 +26,11 @@ int main()
     
     const int handCard_width = 150;
     const int handCard_height = 230;
-    const int handCard_gap = 30;
+    const int handCard_gap = 10;
     const int handCard_x = screenWidth / 2 - (handCard_width + handCard_gap) * 3;
-    const int handCard_y = screenHeight - handCard_height - 20;
+    const int handCard_y = screenHeight - handCard_height / 5;
 
-    InitWindow(screenWidth, screenHeight, "raylib");
+    InitWindow(screenWidth, screenHeight, "Forte of Cosmos");
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     int frameCounter = 0;
 
@@ -92,7 +94,8 @@ int main()
                     if (CheckCollisionPointRec(GetMousePosition(), card->cardRect)) {
                         heldCard = card;
                         holdingCard = true; 
-                        heldCardOffset = {Vector2Subtract(card->pos_lock, GetMousePosition())};
+                        Vector2 cardPos = Vector2(card->cardRect.x, card->cardRect.y);
+                        heldCardOffset = {Vector2Subtract(cardPos, GetMousePosition())};
                     }
                 }
             }
@@ -114,6 +117,26 @@ int main()
             Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
             heldCard->cardRect.x = cardPos.x;
             heldCard->cardRect.y = cardPos.y;
+        } 
+        
+        if (!holdingCard) {
+            // Check if hovering over a card.
+            if (!isHoveringCard) {
+                for (int cardId : hand) {
+                    Card *card = p1Deck.cards[cardId];
+                    if (CheckCollisionPointRec(GetMousePosition(), card->cardRect)) {
+                        isHoveringCard = true;
+                        hoveredCard = card;
+                        card->cardRect.y = card->cardRect.y - (3 * card->cardRect.height / 4);
+                    }
+                }
+            } else {
+                if (!CheckCollisionPointRec(GetMousePosition(), hoveredCard->cardRect)) {
+                    isHoveringCard = false;
+                    hoveredCard->cardRect.y = hoveredCard->pos_lock.y;
+                    hoveredCard = 0;
+                }
+            }
         }
 
         frameCounter++;
