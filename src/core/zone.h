@@ -2,6 +2,7 @@
 #define ZONE_H
 
 #include "raylib.h"
+#include <vector>
 
 // Clockwise starting at bottom-right
 // Zone1 == bottom-right, Zone2 == bottom-left, Zone3 == top-left, Zone4 == top-right
@@ -20,6 +21,17 @@ struct Zone {
     Rectangle rect = Rectangle(0, 0, 0, 0);
     Color color = Color(0, 0, 0);
     Color lock_color = Color(0, 0, 0);
+    std::vector<Card*> cards = {};
+
+    void addCard(Card *card) {
+        this->cards.push_back(card);
+        int lastIndex = this->cards.size();
+        int cardSize = 50;
+        int gap = 5;
+
+        card->pos_lock = Vector2(rect.x + lastIndex * (cardSize + gap), rect.y + gap);
+        card->cardRect.width = card->cardRect.height = cardSize;
+    }
 
     void setRect(int screenWidth, int screenHeight) {
         switch (this->zoneNum) {

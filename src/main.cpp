@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <format>
+#include <bits/stdc++.h>
 using namespace std;
 
 void releaseCard();
@@ -20,7 +21,8 @@ int main()
     const int screenHeight = 720;
 
     SetRandomSeed(time(NULL));
-    bool playerTurn = (GetRandomValue(0, 1) == 1);
+    // bool playerTurn = (GetRandomValue(0, 1) == 1); RANDOMLY CHOOSE STARTING PLAYER
+    bool playerTurn = 1; // Player 1 always starts for dev testing
     int turnNum = 1;
     int energy = turnNum * 2;
 
@@ -76,11 +78,11 @@ int main()
     }
 
     // Setup Player1's hand
-    vector<int> hand;
+    vector<Card*> hand; // Consider using std::list instead of vector because of frequent insertions/deletions
     for (int i = 0; i < 6; i++)
     {
-        hand.push_back(i);
         Card *card = p1Deck.cards[i];
+        hand.push_back(card);
         card->cardRect.width = handCard_width;
         card->cardRect.height = handCard_height;
         card->cardRect.x = i * (card->cardRect.width + handCard_gap) + handCard_x;
@@ -98,9 +100,8 @@ int main()
         {
             if (!holdingCard)
             {
-                for (int cardId : hand)
+                for (Card *card : hand)
                 {
-                    Card *card = p1Deck.cards[cardId];
                     if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
                     {
                         heldCard = card;
@@ -126,8 +127,17 @@ int main()
             if (holdingCard)
             {
                 if (playerTurn) {
-                    if (CheckCollisionRecs(heldCard->cardRect, zones[0]->rect)) {
-
+                    if (heldCard->cost <= energy) {
+                        if (CheckCollisionPointRec(GetMousePosition(), zones[0]->rect)) {
+                            auto it = find(hand.begin(), hand.end(), heldCard);
+                            hand.erase(it);
+                            switch(heldCard->type) {
+                                case CardTypes::Sentient:
+                                    zones[0]->addCard(heldCard);
+                                    break;
+                            }
+                            energy -= heldCard->cost;
+                        }
                     }
                 }
 
@@ -149,7 +159,7 @@ int main()
 
             if (playerTurn) {
                 for (Zone *zone : playerZones) {
-                    if (CheckCollisionRecs(heldCard->cardRect, zone->rect)) {
+                    if (CheckCollisionPointRec(GetMousePosition(), zone->rect)) {
                         zone->color = Color(0, 0, 255);
                     } else {
                         zone->color = zone->lock_color;
@@ -160,12 +170,15 @@ int main()
 
         if (!holdingCard)
         {
+            for (Zone *zone : playerZones) {
+                zone->color = zone->lock_color;
+            }
+
             // Check if hovering over a card.
             if (!isHoveringCard)
             {
-                for (int cardId : hand)
+                for (Card *card : hand)
                 {
-                    Card *card = p1Deck.cards[cardId];
                     if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
                     {
                         isHoveringCard = true;
@@ -199,6 +212,10 @@ int main()
         for (Zone *zone : zones)
         {
             DrawRectangleRec(zone->rect, zone->color);
+            for (Card *card : zone->cards) {
+                DrawRectangleRec(card->cardRect, GRAY);
+                DrawText(card->name.c_str(), card->cardRect.x + 5, card->cardRect.y + 5, 12, WHITE);
+            }
         }
 
         // Draw Energy
@@ -215,9 +232,8 @@ int main()
         DrawFPS(10, 10);
 
         // Draw Cards in hand
-        for (int i : hand)
+        for (Card *card : hand)
         {
-            Card *card = p1Deck.cards[i];
             if (holdingCard && card == heldCard)
                 continue;
 
