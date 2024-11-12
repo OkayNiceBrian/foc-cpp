@@ -11,6 +11,10 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+enum Phase {
+    Rotate,
+    Play,
+};
 void releaseCard();
 
 int main()
@@ -25,6 +29,7 @@ int main()
     bool playerTurn = 1; // Player 1 always starts for dev testing
     int turnNum = 1;
     int energy = turnNum * 2;
+    Phase phase = Phase::Play;
 
     bool isHoveringCard = false;
     Card *hoveredCard;
@@ -126,7 +131,7 @@ int main()
         {
             if (holdingCard)
             {
-                if (playerTurn) {
+                if (playerTurn && phase == Phase::Play) {
                     if (heldCard->cost <= energy) {
                         if (CheckCollisionPointRec(GetMousePosition(), zones[0]->rect)) {
                             auto it = find(hand.begin(), hand.end(), heldCard);
@@ -150,8 +155,37 @@ int main()
 
         // Update
         //----------------------------------------------------------------------------------
-        if (holdingCard)
-        {
+        switch(phase) {
+        // =============================== Rotate ==========================================
+        case Phase::Rotate:
+        vector<Card*> tempRotators;
+        for (Zone *zone : zones) {
+            for (Card *card : zone->cards) {
+                // TODO:ROTATE EVERY CARD 
+            }
+        }
+        break;
+
+        // =============================== Play ============================================
+        case Phase::Play:
+        if (playerTurn) {
+            // Check if player's turn is over.
+            int lowestCost = INT32_MAX;
+            for (Card *card : hand) {
+                if (card->cost < lowestCost) {
+                    lowestCost = card->cost;
+                }
+            }
+            if (energy < lowestCost) {
+                playerTurn = false;
+                phase = Phase::Rotate;
+            }
+        }
+        break;
+        
+        // =============================== All Phases ======================================
+        default:
+        if (holdingCard) {
             Vector2 mousePos = GetMousePosition();
             Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
             heldCard->cardRect.x = cardPos.x;
@@ -197,7 +231,13 @@ int main()
                 }
             }
         }
+        break;
+        }
+        
 
+        
+
+        
         frameCounter++;
         //----------------------------------------------------------------------------------
 
