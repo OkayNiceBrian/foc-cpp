@@ -157,82 +157,80 @@ int main()
         //----------------------------------------------------------------------------------
         switch(phase) {
         // =============================== Rotate ==========================================
-        case Phase::Rotate:
-        vector<Card*> tempRotators;
-        for (Zone *zone : zones) {
-            for (Card *card : zone->cards) {
-                // TODO:ROTATE EVERY CARD 
+        case Phase::Rotate: {
+            vector<Card*> tempRotators = {};
+            for (Zone *zone : zones) {
+                for (Card *card : zone->cards) {
+                    // TODO:ROTATE EVERY CARD 
+                }
             }
-        }
-        break;
-
+        } break;
         // =============================== Play ============================================
-        case Phase::Play:
-        if (playerTurn) {
-            // Check if player's turn is over.
-            int lowestCost = INT32_MAX;
-            for (Card *card : hand) {
-                if (card->cost < lowestCost) {
-                    lowestCost = card->cost;
-                }
-            }
-            if (energy < lowestCost) {
-                playerTurn = false;
-                phase = Phase::Rotate;
-            }
-        }
-        break;
-        
-        // =============================== All Phases ======================================
-        default:
-        if (holdingCard) {
-            Vector2 mousePos = GetMousePosition();
-            Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
-            heldCard->cardRect.x = cardPos.x;
-            heldCard->cardRect.y = cardPos.y;
-
+        case Phase::Play: {
             if (playerTurn) {
+                // Check if player's turn is over.
+                int lowestCost = INT32_MAX;
+                for (Card *card : hand) {
+                    if (card->cost < lowestCost) {
+                        lowestCost = card->cost;
+                    }
+                }
+                if (energy < lowestCost) {
+                    playerTurn = false;
+                    phase = Phase::Rotate;
+                }
+            }
+        } break;
+        // =============================== All Phases ======================================
+        default: {
+            if (holdingCard) {
+                Vector2 mousePos = GetMousePosition();
+                Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
+                heldCard->cardRect.x = cardPos.x;
+                heldCard->cardRect.y = cardPos.y;
+
+                if (playerTurn) {
+                    for (Zone *zone : playerZones) {
+                        if (CheckCollisionPointRec(GetMousePosition(), zone->rect)) {
+                            zone->color = Color(0, 0, 255);
+                        } else {
+                            zone->color = zone->lock_color;
+                        }
+                    }
+                }
+            }
+
+            if (!holdingCard)
+            {
                 for (Zone *zone : playerZones) {
-                    if (CheckCollisionPointRec(GetMousePosition(), zone->rect)) {
-                        zone->color = Color(0, 0, 255);
-                    } else {
-                        zone->color = zone->lock_color;
-                    }
+                    zone->color = zone->lock_color;
                 }
-            }
-        }
 
-        if (!holdingCard)
-        {
-            for (Zone *zone : playerZones) {
-                zone->color = zone->lock_color;
-            }
-
-            // Check if hovering over a card.
-            if (!isHoveringCard)
-            {
-                for (Card *card : hand)
+                // Check if hovering over a card.
+                if (!isHoveringCard)
                 {
-                    if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
+                    for (Card *card : hand)
                     {
-                        isHoveringCard = true;
-                        hoveredCard = card;
-                        card->cardRect.y = card->cardRect.y - (4 * card->cardRect.height / 5);
+                        if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
+                        {
+                            isHoveringCard = true;
+                            hoveredCard = card;
+                            card->cardRect.y = card->cardRect.y - (4 * card->cardRect.height / 5);
+                        }
+                    }
+                }
+                else
+                {
+                    if (!CheckCollisionPointRec(GetMousePosition(), hoveredCard->cardRect))
+                    {
+                        isHoveringCard = false;
+                        hoveredCard->cardRect.y = hoveredCard->pos_lock.y;
+                        hoveredCard = 0;
                     }
                 }
             }
-            else
-            {
-                if (!CheckCollisionPointRec(GetMousePosition(), hoveredCard->cardRect))
-                {
-                    isHoveringCard = false;
-                    hoveredCard->cardRect.y = hoveredCard->pos_lock.y;
-                    hoveredCard = 0;
-                }
-            }
         }
-        break;
-        }
+        } // =============== END STATE SWITCH ================
         
 
         
