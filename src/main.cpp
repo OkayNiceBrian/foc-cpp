@@ -181,56 +181,56 @@ int main()
                 }
             }
         } break;
+        }
         // =============================== All Phases ======================================
-        default: {
-            if (holdingCard) {
-                Vector2 mousePos = GetMousePosition();
-                Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
-                heldCard->cardRect.x = cardPos.x;
-                heldCard->cardRect.y = cardPos.y;
+        
+        if (holdingCard) {
+            Vector2 mousePos = GetMousePosition();
+            Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
+            heldCard->cardRect.x = cardPos.x;
+            heldCard->cardRect.y = cardPos.y;
 
-                if (playerTurn) {
-                    for (Zone *zone : playerZones) {
-                        if (CheckCollisionPointRec(GetMousePosition(), zone->rect)) {
-                            zone->color = Color(0, 0, 255);
-                        } else {
-                            zone->color = zone->lock_color;
-                        }
-                    }
-                }
-            }
-
-            if (!holdingCard)
-            {
+            if (playerTurn) {
                 for (Zone *zone : playerZones) {
-                    zone->color = zone->lock_color;
-                }
-
-                // Check if hovering over a card.
-                if (!isHoveringCard)
-                {
-                    for (Card *card : hand)
-                    {
-                        if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
-                        {
-                            isHoveringCard = true;
-                            hoveredCard = card;
-                            card->cardRect.y = card->cardRect.y - (4 * card->cardRect.height / 5);
-                        }
-                    }
-                }
-                else
-                {
-                    if (!CheckCollisionPointRec(GetMousePosition(), hoveredCard->cardRect))
-                    {
-                        isHoveringCard = false;
-                        hoveredCard->cardRect.y = hoveredCard->pos_lock.y;
-                        hoveredCard = 0;
+                    if (CheckCollisionPointRec(GetMousePosition(), zone->rect)) {
+                        zone->color = Color(0, 0, 255);
+                    } else {
+                        zone->color = zone->lock_color;
                     }
                 }
             }
         }
-        } // =============== END STATE SWITCH ================
+
+        if (!holdingCard)
+        {
+            for (Zone *zone : playerZones) {
+                zone->color = zone->lock_color;
+            }
+
+            // Check if hovering over a card.
+            if (!isHoveringCard)
+            {
+                for (Card *card : hand)
+                {
+                    if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
+                    {
+                        isHoveringCard = true;
+                        hoveredCard = card;
+                        card->cardRect.y = card->cardRect.y - (4 * card->cardRect.height / 5);
+                    }
+                }
+            }
+            else
+            {
+                if (!CheckCollisionPointRec(GetMousePosition(), hoveredCard->cardRect))
+                {
+                    isHoveringCard = false;
+                    hoveredCard->cardRect.y = hoveredCard->pos_lock.y;
+                    hoveredCard = 0;
+                }
+            }
+        }
+        // =============== END STATE SWITCH ================
         
 
         
