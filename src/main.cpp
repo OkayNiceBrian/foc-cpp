@@ -158,12 +158,34 @@ int main()
         switch(phase) {
         // =============================== Rotate ==========================================
         case Phase::Rotate: {
-            vector<Card*> tempRotators = {};
-            for (Zone *zone : zones) {
-                for (Card *card : zone->cards) {
-                    // TODO:ROTATE EVERY CARD 
-                }
+            // Increment the turn and set the energy
+            if (turnNum % 2 == 1) {
+                energy = ++turnNum;
+            } else {
+                energy = turnNum++;
             }
+
+            // ==== Rotation =====
+            // Rotate the cards
+            Zone tempZone = {};
+            for (int i = 3; i >= 0; --i) {
+                Zone *zone = zones[i];
+                for (Card *card : zone->cards) {
+                    if (zone->zoneNum == Zones::Zone4) {
+                        tempZone.addCard(card);
+                    } else {
+                        zones[i + 1]->addCard(card);
+                    }
+                }
+                zones[i]->cards.clear();
+            }
+            for (Card *card : tempZone.cards) {
+                zones[0]->addCard(card);
+            }
+            tempZone.cards.clear();
+
+            // ==== Next Phase ====
+            phase = Phase::Play;
         } break;
         // =============================== Play ============================================
         case Phase::Play: {
