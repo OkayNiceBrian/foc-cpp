@@ -202,6 +202,12 @@ int main()
                     phase = Phase::Rotate;
                 }
             }
+
+            // Switch turns if not player turn for testing
+            if (!playerTurn) {
+                playerTurn = true;
+                phase = Phase::Rotate;
+            }
         } break;
         }
         // =============================== All Phases ======================================
