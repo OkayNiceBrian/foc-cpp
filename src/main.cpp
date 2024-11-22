@@ -21,6 +21,7 @@ enum Phase
 void releaseCard();
 void shuffleDeck(vector<Card *> *deck);
 void drawCard(vector<Card *> *hand, vector<Card *> *deck);
+void repositionHand(vector<Card*> *hand);
 
 // Set globals
 const int screenWidth = 1280;
@@ -159,6 +160,7 @@ int main()
                                 break;
                             }
                             energy -= heldCard->cost;
+                            repositionHand(&hand);
                         }
                     }
                 }
@@ -414,13 +416,23 @@ void shuffleDeck(vector<Card *> *deck)
 
 void drawCard(vector<Card *> *hand, vector<Card *> *deck)
 {
-    Card *card = deck->front();
-    deck->erase(begin(*deck));
-    hand->push_back(card);
-    card->cardRect.width = handCard_width;
-    card->cardRect.height = handCard_height;
-    card->cardRect.x = (hand->size() - 1) * (card->cardRect.width + handCard_gap) + handCard_x;
-    card->cardRect.y = handCard_y;
-    card->pos_lock.x = card->cardRect.x;
-    card->pos_lock.y = card->cardRect.y;
+    if (deck->size() > 0) {
+        Card *card = deck->front();
+        deck->erase(begin(*deck));
+        hand->push_back(card);
+        card->cardRect.width = handCard_width;
+        card->cardRect.height = handCard_height;
+        card->cardRect.x = (hand->size() - 1) * (card->cardRect.width + handCard_gap) + handCard_x;
+        card->cardRect.y = handCard_y;
+        card->pos_lock.x = card->cardRect.x;
+        card->pos_lock.y = card->cardRect.y;
+    }
+}
+
+void repositionHand(vector<Card*> *hand) {
+    for (unsigned i = 0; i < hand->size(); i++) {
+        Card *card = hand->at(i);
+        card->cardRect.x = i * (card->cardRect.width + handCard_gap) + handCard_x;
+        card->pos_lock.x = card->cardRect.x;
+    }
 }
