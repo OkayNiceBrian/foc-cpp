@@ -8,22 +8,33 @@
 #include <vector>
 #include <string>
 #include <format>
+#include <algorithm>
 #include <bits/stdc++.h>
 using namespace std;
 
-enum Phase {
+enum Phase
+{
     Rotate,
     Play,
 };
+
 void releaseCard();
+void shuffleDeck(vector<Card *> *deck);
+void drawCard(vector<Card *> *hand, vector<Card *> *deck);
+
+// Set globals
+const int screenWidth = 1280;
+const int screenHeight = 720;
+const int handCard_width = 150;
+const int handCard_height = 230;
+const int handCard_gap = 10;
+const int handCard_x = screenWidth / 2 - (handCard_width + handCard_gap) * 3;
+const int handCard_y = screenHeight - handCard_height / 5;
 
 int main()
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    const int screenWidth = 1280;
-    const int screenHeight = 720;
-
     SetRandomSeed(time(NULL));
     // bool playerTurn = (GetRandomValue(0, 1) == 1); RANDOMLY CHOOSE STARTING PLAYER
     bool playerTurn = 1; // Player 1 always starts for dev testing
@@ -37,12 +48,6 @@ int main()
     bool holdingCard = false;
     Card *heldCard;
     Vector2 heldCardOffset;
-
-    const int handCard_width = 150;
-    const int handCard_height = 230;
-    const int handCard_gap = 10;
-    const int handCard_x = screenWidth / 2 - (handCard_width + handCard_gap) * 3;
-    const int handCard_y = screenHeight - handCard_height / 5;
 
     InitWindow(screenWidth, screenHeight, "Forte of Cosmos");
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
@@ -72,21 +77,27 @@ int main()
         zones[2],
         zones[3]};
 
-    // Setup Player1's deck
-    DeckInfo p1Deck = {};
-    p1Deck.name = "Straight Fiyah";
-    for (unsigned i = 0; i < sizeof(p1Deck.cards) / sizeof(p1Deck.cards[0]); i++)
+    // Setup Player1's deck info
+    DeckInfo p1DeckInfo = {};
+    p1DeckInfo.name = "Straight Fiyah";
+    for (unsigned i = 0; i < sizeof(p1DeckInfo.cards) / sizeof(p1DeckInfo.cards[0]); i++)
     {
         string name = string("Virgo") + to_string(i);
         Card *card = new Card(name, "I'm a what?", 2, CardTypes::Sentient, 20, 20, CardStates::hand);
-        p1Deck.cards[i] = card;
+        p1DeckInfo.cards[i] = card;
     }
 
+    // Setup Deck and shuffle
+    vector<Card *> p1Deck;
+    copy(begin(p1DeckInfo.cards), end(p1DeckInfo.cards), back_inserter(p1Deck));
+    shuffleDeck(&p1Deck);
+
     // Setup Player1's hand
-    vector<Card*> hand; // Consider using std::list instead of vector because of frequent insertions/deletions
+    vector<Card *> hand; // Consider using std::list instead of vector because of frequent insertions/deletions
     for (int i = 0; i < 6; i++)
     {
-        Card *card = p1Deck.cards[i];
+        Card *card = p1Deck.front();
+        p1Deck.erase(p1Deck.begin());
         hand.push_back(card);
         card->cardRect.width = handCard_width;
         card->cardRect.height = handCard_height;
@@ -118,8 +129,10 @@ int main()
             }
         }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-            if (holdingCard) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+        {
+            if (holdingCard)
+            {
                 holdingCard = false;
                 heldCard->cardRect.x = heldCard->pos_lock.x;
                 heldCard->cardRect.y = heldCard->pos_lock.y;
@@ -131,15 +144,19 @@ int main()
         {
             if (holdingCard)
             {
-                if (playerTurn && phase == Phase::Play) {
-                    if (heldCard->cost <= energy) {
-                        if (CheckCollisionPointRec(GetMousePosition(), zones[0]->rect)) {
+                if (playerTurn && phase == Phase::Play)
+                {
+                    if (heldCard->cost <= energy)
+                    {
+                        if (CheckCollisionPointRec(GetMousePosition(), zones[0]->rect))
+                        {
                             auto it = find(hand.begin(), hand.end(), heldCard);
                             hand.erase(it);
-                            switch(heldCard->type) {
-                                case CardTypes::Sentient:
-                                    zones[0]->addCard(heldCard);
-                                    break;
+                            switch (heldCard->type)
+                            {
+                            case CardTypes::Sentient:
+                                zones[0]->addCard(heldCard);
+                                break;
                             }
                             energy -= heldCard->cost;
                         }
@@ -153,76 +170,105 @@ int main()
             }
         }
 
-        // Update
-        //----------------------------------------------------------------------------------
-        switch(phase) {
+        // ====================================================================
+        // ============================== UPDATE ==============================
+        // ====================================================================
+        switch (phase)
+        {
         // =============================== Rotate ==========================================
-        case Phase::Rotate: {
+        case Phase::Rotate:
+        {
             // Increment the turn and set the energy
-            if (turnNum % 2 == 1) {
+            if (turnNum % 2 == 1)
+            {
                 energy = ++turnNum;
-            } else {
+            }
+            else
+            {
                 energy = turnNum++;
             }
 
-            // ==== Rotation =====
+            // ==== Rotate =====
             // Rotate the cards
             Zone tempZone = {};
-            for (int i = 3; i >= 0; --i) {
+            for (int i = 3; i >= 0; --i)
+            {
                 Zone *zone = zones[i];
-                for (Card *card : zone->cards) {
-                    if (zone->zoneNum == Zones::Zone4) {
+                for (Card *card : zone->cards)
+                {
+                    if (zone->zoneNum == Zones::Zone4)
+                    {
                         tempZone.addCard(card);
-                    } else {
+                    }
+                    else
+                    {
                         zones[i + 1]->addCard(card);
                     }
                 }
                 zones[i]->cards.clear();
             }
-            for (Card *card : tempZone.cards) {
+            for (Card *card : tempZone.cards)
+            {
                 zones[0]->addCard(card);
             }
             tempZone.cards.clear();
 
+            // ==== Draw ====
+            drawCard(&hand, &p1Deck);
+
             // ==== Next Phase ====
             phase = Phase::Play;
-        } break;
+        }
+        break;
         // =============================== Play ============================================
-        case Phase::Play: {
-            if (playerTurn) {
+        case Phase::Play:
+        {
+            if (playerTurn)
+            {
                 // Check if player's turn is over.
                 int lowestCost = INT32_MAX;
-                for (Card *card : hand) {
-                    if (card->cost < lowestCost) {
+                for (Card *card : hand)
+                {
+                    if (card->cost < lowestCost)
+                    {
                         lowestCost = card->cost;
                     }
                 }
-                if (energy < lowestCost) {
+                if (energy < lowestCost)
+                {
                     playerTurn = false;
                     phase = Phase::Rotate;
                 }
             }
 
             // Switch turns if not player turn for testing
-            if (!playerTurn) {
+            if (!playerTurn)
+            {
                 playerTurn = true;
                 phase = Phase::Rotate;
             }
-        } break;
         }
+        break;
+        }
+
         // =============================== All Phases ======================================
-        
-        if (holdingCard) {
+        if (holdingCard)
+        {
             Vector2 mousePos = GetMousePosition();
             Vector2 cardPos = Vector2Add(mousePos, heldCardOffset);
             heldCard->cardRect.x = cardPos.x;
             heldCard->cardRect.y = cardPos.y;
 
-            if (playerTurn) {
-                for (Zone *zone : playerZones) {
-                    if (CheckCollisionPointRec(GetMousePosition(), zone->rect)) {
+            if (playerTurn)
+            {
+                for (Zone *zone : playerZones)
+                {
+                    if (CheckCollisionPointRec(GetMousePosition(), zone->rect))
+                    {
                         zone->color = Color(0, 0, 255);
-                    } else {
+                    }
+                    else
+                    {
                         zone->color = zone->lock_color;
                     }
                 }
@@ -231,7 +277,8 @@ int main()
 
         if (!holdingCard)
         {
-            for (Zone *zone : playerZones) {
+            for (Zone *zone : playerZones)
+            {
                 zone->color = zone->lock_color;
             }
 
@@ -258,12 +305,8 @@ int main()
                 }
             }
         }
-        // =============== END STATE SWITCH ================
-        
+        // =============== END STATE UPDATE ================
 
-        
-
-        
         frameCounter++;
         //----------------------------------------------------------------------------------
 
@@ -278,7 +321,8 @@ int main()
         for (Zone *zone : zones)
         {
             DrawRectangleRec(zone->rect, zone->color);
-            for (Card *card : zone->cards) {
+            for (Card *card : zone->cards)
+            {
                 DrawRectangleRec(card->cardRect, GRAY);
                 DrawText(card->name.c_str(), card->cardRect.x + 5, card->cardRect.y + 5, 12, WHITE);
             }
@@ -286,14 +330,17 @@ int main()
 
         // Draw Energy
         Color energyColor;
-        if (playerTurn) {
+        if (playerTurn)
+        {
             energyColor = Color(40, 100, 150);
-        } else {
+        }
+        else
+        {
             energyColor = Color(150, 100, 40);
         }
-        DrawCircle(screenWidth/2, screenHeight/2, screenWidth/40, ColorAlpha(energyColor, .8));
+        DrawCircle(screenWidth / 2, screenHeight / 2, screenWidth / 40, ColorAlpha(energyColor, .8));
         int tw = MeasureText(to_string(energy).c_str(), 36);
-        DrawText(to_string(energy).c_str(), screenWidth/2 - tw/2, screenHeight/2 - 5*tw/6, 36, RAYWHITE);
+        DrawText(to_string(energy).c_str(), screenWidth / 2 - tw / 2, screenHeight / 2 - 5 * tw / 6, 36, RAYWHITE);
 
         DrawFPS(10, 10);
 
@@ -357,7 +404,23 @@ int main()
     CloseWindow(); // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
-    
-
     return 0;
+}
+
+void shuffleDeck(vector<Card *> *deck)
+{
+    random_shuffle(begin(*deck), end(*deck));
+}
+
+void drawCard(vector<Card *> *hand, vector<Card *> *deck)
+{
+    Card *card = deck->front();
+    deck->erase(begin(*deck));
+    hand->push_back(card);
+    card->cardRect.width = handCard_width;
+    card->cardRect.height = handCard_height;
+    card->cardRect.x = (hand->size() - 1) * (card->cardRect.width + handCard_gap) + handCard_x;
+    card->cardRect.y = handCard_y;
+    card->pos_lock.x = card->cardRect.x;
+    card->pos_lock.y = card->cardRect.y;
 }
