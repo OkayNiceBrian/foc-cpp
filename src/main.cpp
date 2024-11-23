@@ -23,6 +23,7 @@ void nextTurn(bool *playerTurn, Phase *phase);
 void shuffleDeck(vector<Card *> *deck);
 void drawCard(vector<Card *> *hand, vector<Card *> *deck);
 void repositionHand(vector<Card*> *hand);
+void rotateCards(Zone *zones[], bool playerTurn);
 
 // Set globals
 const int screenWidth = 1280;
@@ -185,36 +186,8 @@ int main()
             turnNum++;
             energy = turnNum + (turnNum % 2);
 
-            // ==== Rotate =====
-            // Rotate the cards
-            Zone tempZone = {};
-            for (int i = 3; i >= 0; --i)
-            {
-                Zone *zone = zones[i];
-                vector<Card*> removedCards;
-                for (Card *card : zone->cards)
-                {
-                    if (card->playerCard == playerTurn) {
-                        if (zone->zoneNum == Zones::Zone4)
-                        {
-                            tempZone.addCard(card);
-                        }
-                        else
-                        {
-                            zones[i + 1]->addCard(card);
-                        }
-                        removedCards.push_back(card);
-                    }
-                }
-                for (Card *card : removedCards) {
-                    zone->cards.remove(card);
-                }
-            }
-            for (Card *card : tempZone.cards)
-            {
-                zones[0]->addCard(card);
-            }
-            tempZone.cards.clear();
+            // ==== Rotate ====
+            rotateCards(zones, playerTurn);
 
             // ==== Draw ====
             if (playerTurn) {
@@ -439,4 +412,35 @@ void repositionHand(vector<Card*> *hand) {
         card->cardRect.x = i * (card->cardRect.width + handCard_gap) + handCard_x;
         card->pos_lock.x = card->cardRect.x;
     }
+}
+
+void rotateCards(Zone *zones[], bool playerTurn) {
+    Zone tempZone = {};
+    for (int i = 3; i >= 0; --i)
+    {
+        Zone *zone = zones[i];
+        vector<Card*> removedCards;
+        for (Card *card : zone->cards)
+        {
+            if (card->playerCard == playerTurn) {
+                if (zone->zoneNum == Zones::Zone4)
+                {
+                    tempZone.addCard(card);
+                }
+                else
+                {
+                    zones[i + 1]->addCard(card);
+                }
+                removedCards.push_back(card);
+            }
+        }
+        for (Card *card : removedCards) {
+            zone->cards.remove(card);
+        }
+    }
+    for (Card *card : tempZone.cards)
+    {
+        zones[0]->addCard(card);
+    }
+    tempZone.cards.clear();
 }
