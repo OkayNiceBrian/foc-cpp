@@ -26,8 +26,8 @@ void repositionHand(vector<Card*> *hand);
 void rotateCards(Zone *zones[], bool playerTurn);
 
 // Set globals
-const int screenWidth = 1280;
-const int screenHeight = 720;
+const int screenWidth = 1920;
+const int screenHeight = 1080;
 const int handCard_width = 150;
 const int handCard_height = 230;
 const int handCard_gap = 10;
@@ -52,6 +52,7 @@ int main()
     Vector2 heldCardOffset;
 
     InitWindow(screenWidth, screenHeight, "Forte of Cosmos");
+    ToggleFullscreen();
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     int frameCounter = 0;
 
@@ -151,18 +152,25 @@ int main()
                 {
                     if (heldCard->cost <= energy)
                     {
-                        if (CheckCollisionPointRec(GetMousePosition(), zones[0]->rect))
-                        {
-                            auto it = find(hand.begin(), hand.end(), heldCard);
-                            hand.erase(it);
-                            switch (heldCard->type)
+                        for (Zone *zone : playerZones) {
+                            if (CheckCollisionPointRec(GetMousePosition(), zone->rect))
                             {
-                            case CardTypes::Sentient:
-                                zones[0]->addCard(heldCard);
-                                break;
+                                auto it = find(hand.begin(), hand.end(), heldCard);
+                                hand.erase(it);
+                                switch (heldCard->type)
+                                {
+                                case CardTypes::Sentient: {
+                                    zone->addCard(heldCard);
+                                    break;
+                                }
+                                case CardTypes::Nova: {
+                                    zone->addCard(heldCard);
+                                    break;
+                                }
+                                }
+                                energy -= heldCard->cost;
+                                repositionHand(&hand);
                             }
-                            energy -= heldCard->cost;
-                            repositionHand(&hand);
                         }
                     }
                 }
