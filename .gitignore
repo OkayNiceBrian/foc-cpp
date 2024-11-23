@@ -1,3 +1,5 @@
 main
 obj/*
 *.exe
+Makefile
+.vscode/*
