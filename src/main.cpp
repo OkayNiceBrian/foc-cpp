@@ -19,6 +19,7 @@ enum Phase
 };
 
 void releaseCard();
+void nextTurn(bool *playerTurn, Phase *phase);
 void shuffleDeck(vector<Card *> *deck);
 void drawCard(vector<Card *> *hand, vector<Card *> *deck);
 void repositionHand(vector<Card*> *hand);
@@ -37,8 +38,7 @@ int main()
     // Initialization
     //--------------------------------------------------------------------------------------
     SetRandomSeed(time(NULL));
-    // bool playerTurn = (GetRandomValue(0, 1) == 1); RANDOMLY CHOOSE STARTING PLAYER
-    bool playerTurn = 1; // Player 1 always starts for dev testing
+    bool playerTurn = (GetRandomValue(0, 1) == 1); // RANDOMLY CHOOSE STARTING PLAYER
     int turnNum = 1;
     int energy = turnNum * 2;
     Phase phase = Phase::Play;
@@ -84,7 +84,7 @@ int main()
     for (unsigned i = 0; i < sizeof(p1DeckInfo.cards) / sizeof(p1DeckInfo.cards[0]); i++)
     {
         string name = string("Virgo") + to_string(i);
-        Card *card = new Card(name, "I'm a what?", 2, CardTypes::Sentient, 20, 20, CardStates::hand);
+        Card *card = new Card(name, "I'm a what?", 2, CardTypes::Sentient, 20, 20, true, CardStates::hand);
         p1DeckInfo.cards[i] = card;
     }
 
@@ -95,7 +95,8 @@ int main()
 
     // Setup Player1's hand
     vector<Card *> hand; // Consider using std::list instead of vector because of frequent insertions/deletions
-    for (int i = 0; i < 6; i++)
+    int startingHandSize = 5;
+    for (int i = 0; i < startingHandSize; i++)
     {
         Card *card = p1Deck.front();
         p1Deck.erase(p1Deck.begin());
@@ -181,14 +182,8 @@ int main()
         case Phase::Rotate:
         {
             // Increment the turn and set the energy
-            if (turnNum % 2 == 1)
-            {
-                energy = ++turnNum;
-            }
-            else
-            {
-                energy = turnNum++;
-            }
+            turnNum++;
+            energy = turnNum + (turnNum % 2);
 
             // ==== Rotate =====
             // Rotate the cards
@@ -196,18 +191,24 @@ int main()
             for (int i = 3; i >= 0; --i)
             {
                 Zone *zone = zones[i];
+                vector<Card*> removedCards;
                 for (Card *card : zone->cards)
                 {
-                    if (zone->zoneNum == Zones::Zone4)
-                    {
-                        tempZone.addCard(card);
-                    }
-                    else
-                    {
-                        zones[i + 1]->addCard(card);
+                    if (card->playerCard == playerTurn) {
+                        if (zone->zoneNum == Zones::Zone4)
+                        {
+                            tempZone.addCard(card);
+                        }
+                        else
+                        {
+                            zones[i + 1]->addCard(card);
+                        }
+                        removedCards.push_back(card);
                     }
                 }
-                zones[i]->cards.clear();
+                for (Card *card : removedCards) {
+                    zone->cards.remove(card);
+                }
             }
             for (Card *card : tempZone.cards)
             {
@@ -216,7 +217,9 @@ int main()
             tempZone.cards.clear();
 
             // ==== Draw ====
-            drawCard(&hand, &p1Deck);
+            if (playerTurn) {
+                drawCard(&hand, &p1Deck);
+            }
 
             // ==== Next Phase ====
             phase = Phase::Play;
@@ -238,16 +241,12 @@ int main()
                 }
                 if (energy < lowestCost)
                 {
-                    playerTurn = false;
-                    phase = Phase::Rotate;
+                    nextTurn(&playerTurn, &phase);
                 }
-            }
-
-            // Switch turns if not player turn for testing
-            if (!playerTurn)
+            } else if (!playerTurn)
             {
-                playerTurn = true;
-                phase = Phase::Rotate;
+                // Switch turns if not player turn for testing
+                nextTurn(&playerTurn, &phase);
             }
         }
         break;
@@ -407,6 +406,11 @@ int main()
     //--------------------------------------------------------------------------------------
 
     return 0;
+}
+
+void nextTurn(bool *playerTurn, Phase *phase) {
+    *playerTurn = !*playerTurn;
+    *phase = Phase::Rotate;
 }
 
 void shuffleDeck(vector<Card *> *deck)

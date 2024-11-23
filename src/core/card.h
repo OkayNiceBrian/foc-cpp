@@ -26,6 +26,7 @@ struct Card {
     CardTypes type;
     int power;
     int health;
+    bool playerCard;
 
     CardStates state = CardStates::none;
 
