@@ -19,7 +19,7 @@ enum Phase
 };
 
 void releaseCard();
-void nextTurn(bool *playerTurn, Phase *phase);
+void endTurn(bool *playerTurn, Phase *phase);
 void shuffleDeck(vector<Card *> *deck);
 void drawCard(vector<Card *> *hand, vector<Card *> *deck);
 void repositionHand(vector<Card*> *hand);
@@ -55,7 +55,7 @@ int main()
     Vector2 heldCardOffset;
 
     InitWindow(screenWidth, screenHeight, "Forte of Cosmos");
-    ToggleFullscreen();
+    // ToggleFullscreen();
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     int frameCounter = 0;
 
@@ -225,12 +225,18 @@ int main()
                 }
                 if (energy < lowestCost)
                 {
-                    nextTurn(&playerTurn, &phase);
+                    endTurn(&playerTurn, &phase);
                 }
             } else if (!playerTurn)
             {
-                // Switch turns if not player turn for testing
-                nextTurn(&playerTurn, &phase);
+                // If Opponent turn, randomly play cards to a random zone and end turn
+                // int cardCount = GetRandomValue(1, 2);
+                // int oppZone = GetRandomValue(0, 1);
+                // for (int i = 0; i < cardCount; i++) {
+                //     opponentZones[oppZone]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
+                // }
+                opponentZones[0]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
+                endTurn(&playerTurn, &phase);
             }
         }
         break;
@@ -443,7 +449,7 @@ int main()
     return 0;
 }
 
-void nextTurn(bool *playerTurn, Phase *phase) {
+void endTurn(bool *playerTurn, Phase *phase) {
     *playerTurn = !*playerTurn;
     *phase = Phase::Rotate;
 }
