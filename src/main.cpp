@@ -44,8 +44,11 @@ int main()
     int energy = turnNum * 2;
     Phase phase = Phase::Play;
 
-    bool isHoveringCard = false;
-    Card *hoveredCard;
+    bool isHoveringHandCard = false;
+    Card *hoveredHandCard;
+
+    bool isHoveringPlayedCard = false;
+    Card *hoveredPlayedCard;
 
     bool holdingCard = false;
     Card *heldCard;
@@ -264,27 +267,44 @@ int main()
                 zone->color = zone->lock_color;
             }
 
-            // Check if hovering over a card.
-            if (!isHoveringCard)
+            // Check if hovering over a hand card.
+            if (!isHoveringHandCard)
             {
                 for (Card *card : hand)
                 {
                     if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
                     {
-                        isHoveringCard = true;
-                        hoveredCard = card;
+                        isHoveringHandCard = true;
+                        hoveredHandCard = card;
                         card->cardRect.y = card->cardRect.y - (4 * card->cardRect.height / 5);
                     }
                 }
             }
             else
             {
-                if (!CheckCollisionPointRec(GetMousePosition(), hoveredCard->cardRect))
+                if (!CheckCollisionPointRec(GetMousePosition(), hoveredHandCard->cardRect))
                 {
-                    isHoveringCard = false;
-                    hoveredCard->cardRect.y = hoveredCard->pos_lock.y;
-                    hoveredCard = 0;
+                    isHoveringHandCard = false;
+                    hoveredHandCard->cardRect.y = hoveredHandCard->pos_lock.y;
+                    hoveredHandCard = 0;
                 }
+            }
+        }
+
+        // Check if hovering over a played card
+        if (!isHoveringPlayedCard) {
+            for (Zone *zone : zones) {
+                for (Card *card : zone->cards) {
+                    if (CheckCollisionPointRec(GetMousePosition(), card->cardRect)) {
+                        isHoveringPlayedCard = true;
+                        hoveredPlayedCard = card;
+                    }
+                }
+            }
+        } else {
+            if (!CheckCollisionPointRec(GetMousePosition(), hoveredPlayedCard->cardRect)) {
+                isHoveringPlayedCard = false;
+                hoveredPlayedCard = 0;
             }
         }
         // =============== END STATE UPDATE ================
@@ -377,6 +397,36 @@ int main()
             }
             default:
                 break;
+            }
+        } else {
+            // Draw hovered + played card
+            if (isHoveringPlayedCard) {
+                Vector2 mousePos = GetMousePosition();
+                int xOffset = 0;
+                int yOffset = 0;
+                if (mousePos.x > screenWidth / 2) {
+                    xOffset = -handCard_width;
+                }
+                if (mousePos.y > screenHeight / 2) {
+                    yOffset = -handCard_height;
+                }
+                auto x = mousePos.x + xOffset;
+                auto y = mousePos.y + yOffset;
+                DrawRectangle(x, y, handCard_width, handCard_height, GRAY);
+                DrawText(to_string(hoveredPlayedCard->cost).c_str(), x + 5, y + 5, 14, WHITE);
+                DrawText(hoveredPlayedCard->name.c_str(), x + 30, y + 5, 14, WHITE);
+                DrawText(hoveredPlayedCard->desc.c_str(), x + 5, y + handCard_height / 2 + 20, 14, WHITE);
+                switch (hoveredPlayedCard->type)
+                {
+                case CardTypes::Sentient:
+                {
+                    string pt = to_string(hoveredPlayedCard->power) + "/" + to_string(hoveredPlayedCard->health);
+                    DrawText(pt.c_str(), x + handCard_width - 44, y + handCard_height - 15, 14, WHITE);
+                    break;
+                }
+                default:
+                    break;
+                }
             }
         }
 
