@@ -15,6 +15,7 @@ enum Zones {
 
 struct Zone {
     static const int zoneMargin = 10;
+    static const int zonePadding = 50;
 
     bool isPlayerZone;
     Zones zoneNum = Zones::Zone1;
@@ -26,10 +27,10 @@ struct Zone {
     void addCard(Card *card) {
         this->cards.emplace_back(card);
         int lastIndex = this->cards.size() - 1;
-        int cardSize = 50;
-        int gap = 5;
+        int cardSize = 100;
+        int gap = 10;
 
-        card->pos_lock = Vector2(rect.x + lastIndex * (cardSize + gap), rect.y + gap);
+        card->pos_lock = Vector2(rect.x + lastIndex * (cardSize + gap) + zonePadding, rect.y + gap + zonePadding);
         card->cardRect.width = card->cardRect.height = cardSize;
         card->cardRect.x = card->pos_lock.x;
         card->cardRect.y = card->pos_lock.y;

@@ -305,7 +305,11 @@ int main()
             DrawRectangleRec(zone->rect, zone->color);
             for (Card *card : zone->cards)
             {
-                DrawRectangleRec(card->cardRect, GRAY);
+                if (card->playerCard) {
+                    DrawRectangleRec(card->cardRect, BLUE);
+                } else {
+                    DrawRectangleRec(card->cardRect, RED);
+                }
                 DrawText(card->name.c_str(), card->cardRect.x + 5, card->cardRect.y + 5, 12, WHITE);
             }
         }
