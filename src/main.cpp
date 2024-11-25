@@ -76,9 +76,9 @@ int main()
     // Player Health Info
     int playerHealth = 100;
     int opponentHealth = 100;
-    int healthSize = screenWidth / 10;
-    int pHealthY = screenHeight * 3 / 4 - healthSize / 2;
-    int oHealthY = screenHeight / 4 - healthSize / 2;
+    float healthSize = screenWidth / 10;
+    float pHealthY = screenHeight * 3 / 4 - healthSize / 2;
+    float oHealthY = screenHeight / 4 - healthSize / 2;
     Rectangle playerHealthRect = {0, pHealthY, healthSize, healthSize};
     Rectangle opponentHealthRect = {0, oHealthY, healthSize, healthSize};
 
