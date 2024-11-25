@@ -23,14 +23,25 @@ struct Zone {
     Color color = Color(0, 0, 0);
     Color lock_color = Color(0, 0, 0);
     std::list<Card*> cards = {};
+    std::list<Card*> playerCards = {};
+    std::list<Card*> opponentCards = {};
 
     void addCard(Card *card) {
         this->cards.emplace_back(card);
-        int lastIndex = this->cards.size() - 1;
         int cardSize = 100;
         int gap = 10;
+        int lastIndex = 0;
+        int yOffset = 0;
+        if (card->playerCard) {
+            this->playerCards.emplace_back(card);
+            lastIndex = this->playerCards.size() - 1;
+            yOffset = cardSize * 1.5;
+        } else {
+            this->opponentCards.emplace_back(card);
+            lastIndex = this->opponentCards.size() - 1;
+        }
 
-        card->pos_lock = Vector2(rect.x + lastIndex * (cardSize + gap) + zonePadding, rect.y + gap + zonePadding);
+        card->pos_lock = Vector2(rect.x + lastIndex * (cardSize + gap) + zonePadding, rect.y + gap + zonePadding + yOffset);
         card->cardRect.width = card->cardRect.height = cardSize;
         card->cardRect.x = card->pos_lock.x;
         card->cardRect.y = card->pos_lock.y;

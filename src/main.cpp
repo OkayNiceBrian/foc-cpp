@@ -55,7 +55,7 @@ int main()
     Vector2 heldCardOffset;
 
     InitWindow(screenWidth, screenHeight, "Forte of Cosmos");
-    // ToggleFullscreen();
+    ToggleFullscreen();
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     int frameCounter = 0;
 
@@ -504,6 +504,11 @@ void rotateCards(Zone *zones[], bool playerTurn) {
         }
         for (Card *card : removedCards) {
             zone->cards.remove(card);
+            if (playerTurn) {
+                zone->playerCards.remove(card);
+            } else {
+                zone->opponentCards.remove(card);
+            }
         }
     }
     for (Card *card : tempZone.cards)
