@@ -10,6 +10,10 @@
 #include <format>
 #include <algorithm>
 #include <bits/stdc++.h>
+
+#include "core/card.cpp"
+#include "core/zone.cpp"
+
 using namespace std;
 
 enum Phase
@@ -19,15 +23,16 @@ enum Phase
 };
 
 void releaseCard();
-void endTurn(bool *playerTurn, Phase *phase);
+void endTurn(bool *isPlayerTurn, Phase *phase);
 void shuffleDeck(vector<Card *> *deck);
 void drawCard(vector<Card *> *hand, vector<Card *> *deck);
-void repositionHand(vector<Card*> *hand);
-void rotateCards(Zone *zones[], bool playerTurn);
+void repositionHand(vector<Card *> *hand);
+void rotateCards(Zone *zones[], bool isPlayerTurn);
+void stopAttacking(bool *isCardAttacking, Card *attackingCard, Zone *attackingZone);
 
 // Set globals
-const int screenWidth = 1920;
-const int screenHeight = 1080;
+const int screenWidth = 1280;
+const int screenHeight = 720;
 const int handCard_width = 150;
 const int handCard_height = 230;
 const int handCard_gap = 10;
@@ -39,7 +44,7 @@ int main()
     // Initialization
     //--------------------------------------------------------------------------------------
     SetRandomSeed(time(NULL));
-    bool playerTurn = (GetRandomValue(0, 1) == 1); // RANDOMLY CHOOSE STARTING PLAYER
+    bool isPlayerTurn = (GetRandomValue(0, 1) == 1); // RANDOMLY CHOOSE STARTING PLAYER
     int turnNum = 1;
     int energy = turnNum * 2;
     Phase phase = Phase::Play;
@@ -54,14 +59,28 @@ int main()
     Card *heldCard;
     Vector2 heldCardOffset;
 
+    bool isCardAttacking = false;
+    Card *attackingCard;
+    Vector2 attackingCardOrigin;
+    Zone *attackingZone;
+
     InitWindow(screenWidth, screenHeight, "Forte of Cosmos");
-    ToggleFullscreen();
+    // ToggleFullscreen();
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
     int frameCounter = 0;
 
     Image gameBackgroundImage = LoadImage("assets/background.png");
     Texture2D gameBackground = LoadTextureFromImage(gameBackgroundImage);
     UnloadImage(gameBackgroundImage);
+
+    // Player Health Info
+    int playerHealth = 100;
+    int opponentHealth = 100;
+    int healthSize = screenWidth / 10;
+    int pHealthY = screenHeight * 3 / 4 - healthSize / 2;
+    int oHealthY = screenHeight / 4 - healthSize / 2;
+    Rectangle playerHealthRect = {0, pHealthY, healthSize, healthSize};
+    Rectangle opponentHealthRect = {0, oHealthY, healthSize, healthSize};
 
     // Setup Zones
     Zone *zones[4] = {
@@ -88,7 +107,7 @@ int main()
     p1DeckInfo.name = "Straight Fiyah";
     for (unsigned i = 0; i < sizeof(p1DeckInfo.cards) / sizeof(p1DeckInfo.cards[0]); i++)
     {
-        string name = string("Virgo") + to_string(i);
+        string name = string("Virgo");
         Card *card = new Card(name, "I'm a what?", 2, CardTypes::Sentient, 20, 20, true, CardStates::hand);
         p1DeckInfo.cards[i] = card;
     }
@@ -134,6 +153,41 @@ int main()
                     }
                 }
             }
+
+            // Handle attacking logic
+            if (isPlayerTurn && phase == Phase::Play) {
+                if (!isCardAttacking) {
+                    for (Zone *zone : opponentZones) {
+                        for (Card *card : zone->attackers) {
+                            if (CheckCollisionPointRec(GetMousePosition(), card->cardRect)) {
+                                isCardAttacking = true;
+                                attackingCard = card;
+                                attackingCardOrigin = {card->cardRect.x + card->cardRect.width / 2, card->cardRect.y + card->cardRect.height / 2};
+                                attackingZone = zone;
+                            }
+                        }
+                    }
+                } else {
+                    if (attackingZone->defenders.size() <= 0) {
+                        if (CheckCollisionPointRec(GetMousePosition(), opponentHealthRect)) {
+                            opponentHealth -= attackingCard->currentPower;
+                            attackingZone->attackers.remove(attackingCard);
+                            stopAttacking(&isCardAttacking, attackingCard, attackingZone);
+                        }
+                    } else {
+                        Card *toRemove;
+                        for (Card *defender : attackingZone->defenders) {
+                            if (CheckCollisionPointRec(GetMousePosition(), defender->cardRect)) {
+                                toRemove = defender;
+                                defender->takeDamage(attackingCard->currentPower, attackingZone);
+                                attackingCard->takeDamage(defender->currentPower, attackingZone);
+                                stopAttacking(&isCardAttacking, attackingCard, attackingZone);
+                            }
+                        }
+                        attackingZone->defenders.remove(toRemove);
+                    }
+                }
+            }
         }
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
@@ -145,33 +199,40 @@ int main()
                 heldCard->cardRect.y = heldCard->pos_lock.y;
                 heldCard = 0;
             }
+
+            if (isCardAttacking) {
+                stopAttacking(&isCardAttacking, attackingCard, attackingZone);
+            }
         }
 
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
             if (holdingCard)
             {
-                if (playerTurn && phase == Phase::Play)
+                if (isPlayerTurn && phase == Phase::Play)
                 {
-                    if (heldCard->cost <= energy)
+                    if (heldCard->currentCost <= energy)
                     {
-                        for (Zone *zone : playerZones) {
+                        for (Zone *zone : playerZones)
+                        {
                             if (CheckCollisionPointRec(GetMousePosition(), zone->rect))
                             {
                                 auto it = find(hand.begin(), hand.end(), heldCard);
                                 hand.erase(it);
                                 switch (heldCard->type)
                                 {
-                                case CardTypes::Sentient: {
+                                case CardTypes::Sentient:
+                                {
                                     zone->addCard(heldCard);
                                     break;
                                 }
-                                case CardTypes::Nova: {
+                                case CardTypes::Nova:
+                                {
                                     zone->addCard(heldCard);
                                     break;
                                 }
                                 }
-                                energy -= heldCard->cost;
+                                energy -= heldCard->currentCost;
                                 repositionHand(&hand);
                             }
                         }
@@ -198,11 +259,16 @@ int main()
             energy = turnNum + (turnNum % 2);
 
             // ==== Rotate ====
-            rotateCards(zones, playerTurn);
+            rotateCards(zones, isPlayerTurn);
 
             // ==== Draw ====
-            if (playerTurn) {
+            if (isPlayerTurn)
+            {
                 drawCard(&hand, &p1Deck);
+
+                for (Zone *zone : opponentZones) {
+                    zone->setAttackersAndDefenders();
+                }
             }
 
             // ==== Next Phase ====
@@ -212,30 +278,32 @@ int main()
         // =============================== Play ============================================
         case Phase::Play:
         {
-            if (playerTurn)
+            if (isPlayerTurn)
             {
                 // Check if player's turn is over.
                 int lowestCost = INT32_MAX;
                 for (Card *card : hand)
                 {
-                    if (card->cost < lowestCost)
+                    if (card->currentCost < lowestCost)
                     {
-                        lowestCost = card->cost;
+                        lowestCost = card->currentCost;
                     }
                 }
                 if (energy < lowestCost)
                 {
-                    endTurn(&playerTurn, &phase);
+                    endTurn(&isPlayerTurn, &phase);
                 }
-            } else if (!playerTurn)
+            }
+            else if (!isPlayerTurn)
             {
                 // If Opponent turn, randomly play cards to a random zone and end turn
                 int cardCount = GetRandomValue(1, 2);
                 int oppZone = GetRandomValue(0, 1);
-                for (int i = 0; i < cardCount; i++) {
+                for (int i = 0; i < cardCount; i++)
+                {
                     opponentZones[oppZone]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
                 }
-                endTurn(&playerTurn, &phase);
+                endTurn(&isPlayerTurn, &phase);
             }
         }
         break;
@@ -249,7 +317,7 @@ int main()
             heldCard->cardRect.x = cardPos.x;
             heldCard->cardRect.y = cardPos.y;
 
-            if (playerTurn)
+            if (isPlayerTurn)
             {
                 for (Zone *zone : playerZones)
                 {
@@ -297,17 +365,24 @@ int main()
         }
 
         // Check if hovering over a played card
-        if (!isHoveringPlayedCard) {
-            for (Zone *zone : zones) {
-                for (Card *card : zone->cards) {
-                    if (CheckCollisionPointRec(GetMousePosition(), card->cardRect)) {
+        if (!isHoveringPlayedCard && !isHoveringHandCard)
+        {
+            for (Zone *zone : zones)
+            {
+                for (Card *card : zone->cards)
+                {
+                    if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
+                    {
                         isHoveringPlayedCard = true;
                         hoveredPlayedCard = card;
                     }
                 }
             }
-        } else {
-            if (!CheckCollisionPointRec(GetMousePosition(), hoveredPlayedCard->cardRect)) {
+        }
+        else if (isHoveringPlayedCard)
+        {
+            if (!CheckCollisionPointRec(GetMousePosition(), hoveredPlayedCard->cardRect))
+            {
                 isHoveringPlayedCard = false;
                 hoveredPlayedCard = 0;
             }
@@ -330,10 +405,13 @@ int main()
             DrawRectangleRec(zone->rect, zone->color);
             for (Card *card : zone->cards)
             {
-                if (card->isPlayerCard) {
-                    DrawRectangleRec(card->cardRect, BLUE);
-                } else {
-                    DrawRectangleRec(card->cardRect, RED);
+                if (card->isPlayerCard)
+                {
+                    DrawRectangleRec(card->cardRect, Color{0, 121, 241, 180});
+                }
+                else
+                {
+                    DrawRectangleRec(card->cardRect, Color{230, 41, 55, 180});
                 }
                 DrawText(card->name.c_str(), card->cardRect.x + 5, card->cardRect.y + 5, 12, WHITE);
             }
@@ -341,7 +419,7 @@ int main()
 
         // Draw Energy
         Color energyColor;
-        if (playerTurn)
+        if (isPlayerTurn)
         {
             energyColor = Color(40, 100, 150);
         }
@@ -352,6 +430,14 @@ int main()
         DrawCircle(screenWidth / 2, screenHeight / 2, screenWidth / 40, ColorAlpha(energyColor, .8));
         int tw = MeasureText(to_string(energy).c_str(), 36);
         DrawText(to_string(energy).c_str(), screenWidth / 2 - tw / 2, screenHeight / 2 - 5 * tw / 6, 36, RAYWHITE);
+
+        // Draw Health
+        Color pHealthColor = Color { 100, 0, 250, 100 };
+        Color oHealthColor = Color { 250, 0, 100, 100 };
+        DrawRectangleRec(opponentHealthRect, oHealthColor);
+        DrawText(to_string(opponentHealth).c_str(), 0, oHealthY, 36, WHITE);
+        DrawRectangleRec(playerHealthRect, pHealthColor);
+        DrawText(to_string(playerHealth).c_str(), 0, pHealthY, 36, WHITE);
 
         DrawFPS(10, 10);
 
@@ -364,7 +450,7 @@ int main()
             Rectangle cardRect = card->cardRect;
 
             DrawRectangleRec(cardRect, GRAY);
-            DrawText(to_string(card->cost).c_str(), cardRect.x + 5, cardRect.y + 5, 14, WHITE);
+            DrawText(to_string(card->currentCost).c_str(), cardRect.x + 5, cardRect.y + 5, 14, WHITE);
             DrawText(card->name.c_str(), cardRect.x + 30, cardRect.y + 5, 14, WHITE);
             DrawText(card->desc.c_str(), cardRect.x + 5, cardRect.y + cardRect.height / 2 + 20, 14, WHITE);
 
@@ -372,7 +458,7 @@ int main()
             {
             case CardTypes::Sentient:
             {
-                string pt = to_string(card->power) + "/" + to_string(card->health);
+                string pt = to_string(card->currentPower) + "/" + to_string(card->currentHealth);
                 DrawText(pt.c_str(), cardRect.x + cardRect.width - 44, cardRect.y + cardRect.height - 15, 14, WHITE);
                 break;
             }
@@ -388,7 +474,7 @@ int main()
             Rectangle cardRect = card->cardRect;
 
             DrawRectangleRec(cardRect, GRAY);
-            DrawText(to_string(card->cost).c_str(), cardRect.x + 5, cardRect.y + 5, 14, WHITE);
+            DrawText(to_string(card->currentCost).c_str(), cardRect.x + 5, cardRect.y + 5, 14, WHITE);
             DrawText(card->name.c_str(), cardRect.x + 30, cardRect.y + 5, 14, WHITE);
             DrawText(card->desc.c_str(), cardRect.x + 5, cardRect.y + cardRect.height / 2 + 20, 14, WHITE);
 
@@ -396,40 +482,48 @@ int main()
             {
             case CardTypes::Sentient:
             {
-                string pt = to_string(card->power) + "/" + to_string(card->health);
+                string pt = to_string(card->currentPower) + "/" + to_string(card->currentHealth);
                 DrawText(pt.c_str(), cardRect.x + cardRect.width - 44, cardRect.y + cardRect.height - 15, 14, WHITE);
                 break;
             }
             default:
                 break;
             }
-        } else {
+        }
+        else
+        {
             // Draw hovered + played card
-            if (isHoveringPlayedCard) {
+            if (isHoveringPlayedCard)
+            {
                 Vector2 mousePos = GetMousePosition();
-                int xOffset = 0;
-                int yOffset = 0;
-                if (mousePos.x > screenWidth / 2) {
+                int xOffset = 10;
+                int yOffset = 10;
+                if (mousePos.x > screenWidth / 2)
+                {
                     xOffset = -handCard_width;
                 }
-                if (mousePos.y > screenHeight / 2) {
+                if (mousePos.y > screenHeight / 2)
+                {
                     yOffset = -handCard_height;
                 }
                 auto x = mousePos.x + xOffset;
                 auto y = mousePos.y + yOffset;
-                if (hoveredPlayedCard->isPlayerCard) {
+                if (hoveredPlayedCard->isPlayerCard)
+                {
                     DrawRectangle(x, y, handCard_width, handCard_height, BLUE);
-                } else {
+                }
+                else
+                {
                     DrawRectangle(x, y, handCard_width, handCard_height, RED);
                 }
-                DrawText(to_string(hoveredPlayedCard->cost).c_str(), x + 5, y + 5, 14, WHITE);
+                DrawText(to_string(hoveredPlayedCard->currentCost).c_str(), x + 5, y + 5, 14, WHITE);
                 DrawText(hoveredPlayedCard->name.c_str(), x + 30, y + 5, 14, WHITE);
                 DrawText(hoveredPlayedCard->desc.c_str(), x + 5, y + handCard_height / 2 + 20, 14, WHITE);
                 switch (hoveredPlayedCard->type)
                 {
                 case CardTypes::Sentient:
                 {
-                    string pt = to_string(hoveredPlayedCard->power) + "/" + to_string(hoveredPlayedCard->health);
+                    string pt = to_string(hoveredPlayedCard->currentPower) + "/" + to_string(hoveredPlayedCard->currentHealth);
                     DrawText(pt.c_str(), x + handCard_width - 44, y + handCard_height - 15, 14, WHITE);
                     break;
                 }
@@ -437,6 +531,10 @@ int main()
                     break;
                 }
             }
+        }
+
+        if (isCardAttacking) {
+            DrawLineBezier(GetMousePosition(), attackingCardOrigin, 1.0, WHITE);
         }
 
         EndDrawing();
@@ -452,8 +550,9 @@ int main()
     return 0;
 }
 
-void endTurn(bool *playerTurn, Phase *phase) {
-    *playerTurn = !*playerTurn;
+void endTurn(bool *isPlayerTurn, Phase *phase)
+{
+    *isPlayerTurn = !*isPlayerTurn;
     *phase = Phase::Rotate;
 }
 
@@ -464,7 +563,8 @@ void shuffleDeck(vector<Card *> *deck)
 
 void drawCard(vector<Card *> *hand, vector<Card *> *deck)
 {
-    if (deck->size() > 0) {
+    if (deck->size() > 0)
+    {
         Card *card = deck->front();
         deck->erase(begin(*deck));
         hand->push_back(card);
@@ -477,23 +577,27 @@ void drawCard(vector<Card *> *hand, vector<Card *> *deck)
     }
 }
 
-void repositionHand(vector<Card*> *hand) {
-    for (unsigned i = 0; i < hand->size(); i++) {
+void repositionHand(vector<Card *> *hand)
+{
+    for (unsigned i = 0; i < hand->size(); i++)
+    {
         Card *card = hand->at(i);
         card->cardRect.x = i * (card->cardRect.width + handCard_gap) + handCard_x;
         card->pos_lock.x = card->cardRect.x;
     }
 }
 
-void rotateCards(Zone *zones[], bool playerTurn) {
+void rotateCards(Zone *zones[], bool isPlayerTurn)
+{
     Zone tempZone = {};
     for (int i = 3; i >= 0; --i)
     {
         Zone *zone = zones[i];
-        vector<Card*> removedCards;
+        vector<Card *> removedCards;
         for (Card *card : zone->cards)
         {
-            if (card->isPlayerCard == playerTurn) {
+            if (card->isPlayerCard == isPlayerTurn)
+            {
                 if (zone->zoneNum == Zones::Zone4)
                 {
                     tempZone.addCard(card);
@@ -505,11 +609,15 @@ void rotateCards(Zone *zones[], bool playerTurn) {
                 removedCards.push_back(card);
             }
         }
-        for (Card *card : removedCards) {
+        for (Card *card : removedCards)
+        {
             zone->cards.remove(card);
-            if (playerTurn) {
+            if (isPlayerTurn)
+            {
                 zone->playerCards.remove(card);
-            } else {
+            }
+            else
+            {
                 zone->opponentCards.remove(card);
             }
         }
@@ -519,4 +627,10 @@ void rotateCards(Zone *zones[], bool playerTurn) {
         zones[0]->addCard(card);
     }
     tempZone.cards.clear();
+}
+
+void stopAttacking(bool *isCardAttacking, Card *attackingCard, Zone* attackingZone) {
+    *isCardAttacking = false;
+    attackingCard = 0;
+    attackingZone = 0;
 }
