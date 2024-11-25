@@ -230,12 +230,11 @@ int main()
             } else if (!playerTurn)
             {
                 // If Opponent turn, randomly play cards to a random zone and end turn
-                // int cardCount = GetRandomValue(1, 2);
-                // int oppZone = GetRandomValue(0, 1);
-                // for (int i = 0; i < cardCount; i++) {
-                //     opponentZones[oppZone]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
-                // }
-                opponentZones[0]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
+                int cardCount = GetRandomValue(1, 2);
+                int oppZone = GetRandomValue(0, 1);
+                for (int i = 0; i < cardCount; i++) {
+                    opponentZones[oppZone]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
+                }
                 endTurn(&playerTurn, &phase);
             }
         }
@@ -331,7 +330,7 @@ int main()
             DrawRectangleRec(zone->rect, zone->color);
             for (Card *card : zone->cards)
             {
-                if (card->playerCard) {
+                if (card->isPlayerCard) {
                     DrawRectangleRec(card->cardRect, BLUE);
                 } else {
                     DrawRectangleRec(card->cardRect, RED);
@@ -418,7 +417,11 @@ int main()
                 }
                 auto x = mousePos.x + xOffset;
                 auto y = mousePos.y + yOffset;
-                DrawRectangle(x, y, handCard_width, handCard_height, GRAY);
+                if (hoveredPlayedCard->isPlayerCard) {
+                    DrawRectangle(x, y, handCard_width, handCard_height, BLUE);
+                } else {
+                    DrawRectangle(x, y, handCard_width, handCard_height, RED);
+                }
                 DrawText(to_string(hoveredPlayedCard->cost).c_str(), x + 5, y + 5, 14, WHITE);
                 DrawText(hoveredPlayedCard->name.c_str(), x + 30, y + 5, 14, WHITE);
                 DrawText(hoveredPlayedCard->desc.c_str(), x + 5, y + handCard_height / 2 + 20, 14, WHITE);
@@ -490,7 +493,7 @@ void rotateCards(Zone *zones[], bool playerTurn) {
         vector<Card*> removedCards;
         for (Card *card : zone->cards)
         {
-            if (card->playerCard == playerTurn) {
+            if (card->isPlayerCard == playerTurn) {
                 if (zone->zoneNum == Zones::Zone4)
                 {
                     tempZone.addCard(card);

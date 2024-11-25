@@ -32,7 +32,7 @@ struct Zone {
         int gap = 10;
         int lastIndex = 0;
         int yOffset = 0;
-        if (card->playerCard) {
+        if (card->isPlayerCard) {
             this->playerCards.emplace_back(card);
             lastIndex = this->playerCards.size() - 1;
             yOffset = cardSize * 1.5;
