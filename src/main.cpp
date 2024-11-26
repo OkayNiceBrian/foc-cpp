@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "raymath.h"
+#include "graphics/animation.h"
 #include "core/card.h"
 #include "core/deck.h"
 #include "core/zone.h"
@@ -7,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <queue>
 #include <format>
 #include <algorithm>
 #include <bits/stdc++.h>
@@ -15,6 +17,11 @@
 #include "core/zone.cpp"
 
 using namespace std;
+
+enum GameState {
+    Free,
+    Animating
+};
 
 enum Phase
 {
@@ -43,11 +50,15 @@ int main()
 {
     // Initialization
     //--------------------------------------------------------------------------------------
+    GameState gameState = GameState::Free;
     SetRandomSeed(time(NULL));
     bool isPlayerTurn = (GetRandomValue(0, 1) == 1); // RANDOMLY CHOOSE STARTING PLAYER
     int turnNum = 1;
     int energy = turnNum * 2;
     Phase phase = Phase::Play;
+
+    vector<Animation> animations;
+    queue<Animation> animationQueue;
 
     bool isHoveringHandCard = false;
     Card *hoveredHandCard;
