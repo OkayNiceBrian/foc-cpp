@@ -15,10 +15,7 @@ enum CardTypes {
 enum CardStates {
     hand,
     discard,
-    zone1,
-    zone2,
-    zone3,
-    zone4,
+    zone,
     none
 };
 
@@ -40,6 +37,8 @@ struct Card {
     Vector2 pos_lock = {0, 0};
 
     void takeDamage(int damage, Zone *zone);
+
+    void draw();
 };
 
 #endif

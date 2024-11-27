@@ -3,6 +3,7 @@
 
 void Zone::addCard(Card *card) {
     this->cards.emplace_back(card);
+    card->state = CardStates::zone;
     int cardSize = 100;
     int gap = 10;
     int lastIndex = 0;

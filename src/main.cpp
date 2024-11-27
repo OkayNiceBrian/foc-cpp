@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <bits/stdc++.h>
 
+#include "graphics/animation.cpp"
 #include "core/card.cpp"
 #include "core/zone.cpp"
 
@@ -59,6 +60,7 @@ int main()
 
     vector<Animation> animations;
     queue<Animation> animationQueue;
+    vector<Animation> idleAnimations;
 
     bool isHoveringHandCard = false;
     Card *hoveredHandCard;
@@ -220,7 +222,7 @@ int main()
         {
             if (holdingCard)
             {
-                if (isPlayerTurn && phase == Phase::Play)
+                if (isPlayerTurn && phase == Phase::Play && gameState == GameState::Free)
                 {
                     if (heldCard->currentCost <= energy)
                     {
@@ -416,15 +418,7 @@ int main()
             DrawRectangleRec(zone->rect, zone->color);
             for (Card *card : zone->cards)
             {
-                if (card->isPlayerCard)
-                {
-                    DrawRectangleRec(card->cardRect, Color{0, 121, 241, 180});
-                }
-                else
-                {
-                    DrawRectangleRec(card->cardRect, Color{230, 41, 55, 180});
-                }
-                DrawText(card->name.c_str(), card->cardRect.x + 5, card->cardRect.y + 5, 12, WHITE);
+                card->draw();
             }
         }
 
@@ -458,48 +452,14 @@ int main()
             if (holdingCard && card == heldCard)
                 continue;
 
-            Rectangle cardRect = card->cardRect;
-
-            DrawRectangleRec(cardRect, GRAY);
-            DrawText(to_string(card->currentCost).c_str(), cardRect.x + 5, cardRect.y + 5, 14, WHITE);
-            DrawText(card->name.c_str(), cardRect.x + 30, cardRect.y + 5, 14, WHITE);
-            DrawText(card->desc.c_str(), cardRect.x + 5, cardRect.y + cardRect.height / 2 + 20, 14, WHITE);
-
-            switch (card->type)
-            {
-            case CardTypes::Sentient:
-            {
-                string pt = to_string(card->currentPower) + "/" + to_string(card->currentHealth);
-                DrawText(pt.c_str(), cardRect.x + cardRect.width - 44, cardRect.y + cardRect.height - 15, 14, WHITE);
-                break;
-            }
-            default:
-                break;
-            }
+            card->draw();
         }
 
         // Draw Mouse-Held Card
         if (holdingCard)
         {
             Card *card = heldCard;
-            Rectangle cardRect = card->cardRect;
-
-            DrawRectangleRec(cardRect, GRAY);
-            DrawText(to_string(card->currentCost).c_str(), cardRect.x + 5, cardRect.y + 5, 14, WHITE);
-            DrawText(card->name.c_str(), cardRect.x + 30, cardRect.y + 5, 14, WHITE);
-            DrawText(card->desc.c_str(), cardRect.x + 5, cardRect.y + cardRect.height / 2 + 20, 14, WHITE);
-
-            switch (card->type)
-            {
-            case CardTypes::Sentient:
-            {
-                string pt = to_string(card->currentPower) + "/" + to_string(card->currentHealth);
-                DrawText(pt.c_str(), cardRect.x + cardRect.width - 44, cardRect.y + cardRect.height - 15, 14, WHITE);
-                break;
-            }
-            default:
-                break;
-            }
+            card->draw();
         }
         else
         {
@@ -577,6 +537,7 @@ void drawCard(vector<Card *> *hand, vector<Card *> *deck)
     if (deck->size() > 0)
     {
         Card *card = deck->front();
+        card->state = CardStates::hand;
         deck->erase(begin(*deck));
         hand->push_back(card);
         card->cardRect.width = handCard_width;
