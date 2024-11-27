@@ -78,6 +78,8 @@ void Animation::update() {
             } else if (this->timer < this->keyFrames[1]) {
                 card->cardRect.height += 2;
                 card->cardRect.width += 2;
+                card->cardRect.x -= 1;
+                card->cardRect.y -= 1;
             } else {
                 this->hasEnded = true;
             }
