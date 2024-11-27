@@ -58,9 +58,9 @@ int main()
     int energy = turnNum * 2;
     Phase phase = Phase::Play;
 
-    vector<Animation> animations;
-    queue<Animation> animationQueue;
-    vector<Animation> idleAnimations;
+    list<Animation*> animations;
+    queue<Animation*> animationQueue;
+    vector<Animation*> idleAnimations;
 
     bool isHoveringHandCard = false;
     Card *hoveredHandCard;
@@ -130,6 +130,9 @@ int main()
     copy(begin(p1DeckInfo.cards), end(p1DeckInfo.cards), back_inserter(p1Deck));
     shuffleDeck(&p1Deck);
 
+    // Played Cards
+    list<Card*> playedCards;
+
     // Setup Player1's hand
     vector<Card *> hand; // Consider using std::list instead of vector because of frequent insertions/deletions
     int startingHandSize = 5;
@@ -195,6 +198,7 @@ int main()
                                 defender->takeDamage(attackingCard->currentPower, attackingZone);
                                 attackingCard->takeDamage(defender->currentPower, attackingZone);
                                 stopAttacking(&isCardAttacking, attackingCard, attackingZone);
+                                animations.push_back(new Animation(AnimationType::Attack, new vector<Card*>{attackingCard, defender}));
                             }
                         }
                         attackingZone->defenders.remove(toRemove);
@@ -245,6 +249,7 @@ int main()
                                     break;
                                 }
                                 }
+                                playedCards.push_back(heldCard);
                                 energy -= heldCard->currentCost;
                                 repositionHand(&hand);
                             }
@@ -262,65 +267,91 @@ int main()
         // ====================================================================
         // ============================== UPDATE ==============================
         // ====================================================================
-        switch (phase)
-        {
-        // =============================== Rotate ==========================================
-        case Phase::Rotate:
-        {
-            // Increment the turn and set the energy
-            turnNum++;
-            energy = turnNum + (turnNum % 2);
-
-            // ==== Rotate ====
-            rotateCards(zones, isPlayerTurn);
-
-            // ==== Draw ====
-            if (isPlayerTurn)
-            {
-                drawCard(&hand, &p1Deck);
-
-                for (Zone *zone : opponentZones) {
-                    zone->setAttackersAndDefenders();
-                }
-            }
-
-            // ==== Next Phase ====
-            phase = Phase::Play;
+        if (animations.size() > 0) {
+            gameState = GameState::Animating;
         }
-        break;
-        // =============================== Play ============================================
-        case Phase::Play:
-        {
-            if (isPlayerTurn)
-            {
-                // Check if player's turn is over.
-                int lowestCost = INT32_MAX;
-                for (Card *card : hand)
+        switch(gameState) {
+            case GameState::Free: {
+                switch (phase)
                 {
-                    if (card->currentCost < lowestCost)
+                // =============================== Rotate ==========================================
+                case Phase::Rotate:
+                {
+                    // Increment the turn and set the energy
+                    turnNum++;
+                    energy = turnNum + (turnNum % 2);
+
+                    // ==== Rotate ====
+                    rotateCards(zones, isPlayerTurn);
+
+                    // ==== Draw ====
+                    if (isPlayerTurn)
                     {
-                        lowestCost = card->currentCost;
+                        drawCard(&hand, &p1Deck);
+
+                        for (Zone *zone : opponentZones) {
+                            zone->setAttackersAndDefenders();
+                        }
+                    }
+
+                    // ==== Next Phase ====
+                    phase = Phase::Play;
+                }
+                break;
+                // =============================== Play ============================================
+                case Phase::Play:
+                {
+                    if (isPlayerTurn)
+                    {
+                        // Check if player's turn is over.
+                        int lowestCost = INT32_MAX;
+                        for (Card *card : hand)
+                        {
+                            if (card->currentCost < lowestCost)
+                            {
+                                lowestCost = card->currentCost;
+                            }
+                        }
+                        if (energy < lowestCost)
+                        {
+                            endTurn(&isPlayerTurn, &phase);
+                        }
+                    }
+                    else if (!isPlayerTurn)
+                    {
+                        // If Opponent turn, randomly play cards to a random zone and end turn
+                        int cardCount = GetRandomValue(1, 2);
+                        int oppZone = GetRandomValue(0, 1);
+                        for (int i = 0; i < cardCount; i++)
+                        {
+                            Card *card = new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::zone);
+                            opponentZones[oppZone]->addCard(card);
+                            playedCards.push_back(card);
+                        }
+                        endTurn(&isPlayerTurn, &phase);
                     }
                 }
-                if (energy < lowestCost)
-                {
-                    endTurn(&isPlayerTurn, &phase);
+                break;
                 }
+                break;
             }
-            else if (!isPlayerTurn)
-            {
-                // If Opponent turn, randomly play cards to a random zone and end turn
-                int cardCount = GetRandomValue(1, 2);
-                int oppZone = GetRandomValue(0, 1);
-                for (int i = 0; i < cardCount; i++)
-                {
-                    opponentZones[oppZone]->addCard(new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::hand));
+            case GameState::Animating: {
+                for (Animation *animation : animations) {
+                    animation->update();
+
+                    // If a death animation has finished, remove from playedCards
+                    if (animation->type == AnimationType::Death && animation->hasEnded) {
+                        for (int i = 0; i < sizeof(animation->cards); i++) {
+                            Card *card = animation->cards->at(i);
+                            playedCards.remove(card);
+                            card->state = CardStates::discard;
+                        }
+                    }
                 }
-                endTurn(&isPlayerTurn, &phase);
+                break;
             }
         }
-        break;
-        }
+        
 
         // =============================== All Phases ======================================
         if (holdingCard)
@@ -405,7 +436,8 @@ int main()
         frameCounter++;
         //----------------------------------------------------------------------------------
 
-        // Draw
+        //----------------------------------------------------------------------------------
+        // =================================== DRAW ========================================
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
@@ -416,10 +448,11 @@ int main()
         for (Zone *zone : zones)
         {
             DrawRectangleRec(zone->rect, zone->color);
-            for (Card *card : zone->cards)
-            {
-                card->draw();
-            }
+        }
+
+        // Draw played cards
+        for (Card *card : playedCards) {
+            card->draw();
         }
 
         // Draw Energy
@@ -506,6 +539,24 @@ int main()
 
         if (isCardAttacking) {
             DrawLineBezier(GetMousePosition(), attackingCardOrigin, 1.0, WHITE);
+        }
+
+        if (gameState == GameState::Animating) {
+            // Remove finished animations
+            vector<Animation*> toRemove;
+            for (Animation* animation : animations) {
+                if (animation->hasEnded) {
+                    toRemove.push_back(animation);
+                }
+            }
+            for (Animation *animation : toRemove) {
+                animations.remove(animation);
+            }
+
+            // Switch game state if no more animations
+            if (animations.size() == 0) {
+                gameState = GameState::Free;
+            }
         }
 
         EndDrawing();

@@ -5,7 +5,8 @@
 #include "../core/card.h"
 
 enum AnimationType {
-    Attack
+    Attack,
+    Death
 };
 
 struct Animation {
@@ -16,7 +17,6 @@ struct Animation {
     bool hasEnded = false;
 
     void update();
-    void draw();
 };
 
 #endif
