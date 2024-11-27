@@ -339,10 +339,17 @@ int main()
                 for (Animation *animation : animations) {
                     animation->update();
 
+                    // If an attack animation has finished and cards are dead, start death animation
+                    if (animation->type == AnimationType::Attack && animation->hasEnded) {
+                        for (Card *card : *animation->cards) {
+                            if (card->currentHealth <= 0) {
+                                animations.push_back(new Animation(AnimationType::Death, new vector<Card*>{card}));
+                            }
+                        }
+                    }
                     // If a death animation has finished, remove from playedCards
                     if (animation->type == AnimationType::Death && animation->hasEnded) {
-                        for (int i = 0; i < sizeof(animation->cards); i++) {
-                            Card *card = animation->cards->at(i);
+                        for (Card *card : *animation->cards) {
                             playedCards.remove(card);
                             card->state = CardStates::discard;
                         }
@@ -551,6 +558,7 @@ int main()
             }
             for (Animation *animation : toRemove) {
                 animations.remove(animation);
+                delete(animation);
             }
 
             // Switch game state if no more animations

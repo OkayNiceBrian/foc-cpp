@@ -33,12 +33,29 @@ void Animation::update() {
                 defendingCard->cardRect.y = defendingCard->pos_lock.y;
                 this->hasEnded = true;
             }
-
-            this->timer++;
             break;
         }
         case AnimationType::Death: {
+            if (this->timer == 0) {
+                this->keyFrames.push_back(30);
+                this->keyFrames.push_back(40);
+            }
+
+            Card* card = this->cards->at(0);
+
+            if (this->timer < this->keyFrames[0]) {
+                int x = GetRandomValue(-3, 3);
+                int y = GetRandomValue(-3, 3);
+                card->cardRect.x += x;
+                card->cardRect.y += y;
+            } else if (this->timer < this->keyFrames[1]) {
+                card->cardRect.height += 2;
+                card->cardRect.width += 2;
+            } else {
+                this->hasEnded = true;
+            }
             break;
         }
     }
+    this->timer++;
 }
