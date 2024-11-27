@@ -35,6 +35,33 @@ void Animation::update() {
             }
             break;
         }
+        case AnimationType::AttackPlayer: {
+            if (this->timer == 0) {
+                this->keyFrames.push_back(20); // Windup
+                this->keyFrames.push_back(30); // Attack
+                this->keyFrames.push_back(45); // recoil
+            }
+
+            Card *attacker = this->cards->at(0);
+            Rectangle *life = this->rects->at(0);
+
+            if (this->timer < this->keyFrames[0]) {
+                attacker->cardRect.y += 2;
+            } else if (this->timer < this->keyFrames[1]) {
+                int frames = this->keyFrames[1] - this->keyFrames[0];
+                int yDifference = attacker->cardRect.y - life->y;
+                int xDifference = attacker->cardRect.x - life->x;
+                attacker->cardRect.y -= yDifference / frames;
+                attacker->cardRect.x -= xDifference / frames;
+            } else if (this->timer < this->keyFrames[3]) {
+                attacker->cardRect.y += 5;
+            } else {
+                attacker->cardRect.x = attacker->pos_lock.x;
+                attacker->cardRect.y = attacker->pos_lock.y;
+                this->hasEnded = true;
+            }
+            break;
+        }
         case AnimationType::Death: {
             if (this->timer == 0) {
                 this->keyFrames.push_back(30);

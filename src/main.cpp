@@ -189,6 +189,7 @@ int main()
                             opponentHealth -= attackingCard->currentPower;
                             attackingZone->attackers.remove(attackingCard);
                             stopAttacking(&isCardAttacking, attackingCard, attackingZone);
+                            animations.push_back(new Animation(AnimationType::AttackPlayer, new vector<Card*>{attackingCard}, new vector<Rectangle*>{&opponentHealthRect}));
                         }
                     } else {
                         Card *toRemove;
