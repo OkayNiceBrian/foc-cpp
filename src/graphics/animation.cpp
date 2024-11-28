@@ -88,3 +88,7 @@ void Animation::update() {
     }
     this->timer++;
 }
+
+void Animation::draw() {
+    
+}

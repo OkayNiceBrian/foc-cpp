@@ -553,6 +553,7 @@ int main()
             // Remove finished animations
             vector<Animation*> toRemove;
             for (Animation* animation : animations) {
+                animation->draw();
                 if (animation->hasEnded) {
                     toRemove.push_back(animation);
                 }

@@ -20,6 +20,7 @@ struct Animation {
     bool hasEnded = false;
 
     void update();
+    void draw();
 };
 
 #endif
