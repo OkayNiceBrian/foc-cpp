@@ -66,6 +66,8 @@ void Animation::update() {
             if (this->timer == 0) {
                 this->keyFrames.push_back(30);
                 this->keyFrames.push_back(40);
+                this->keyFrames.push_back(55);
+                this->points.push_back(new Vector2{this->cards->at(0)->cardRect.x + this->cards->at(0)->cardRect.width / 2, this->cards->at(0)->cardRect.y + this->cards->at(0)->cardRect.height / 2});
             }
 
             Card* card = this->cards->at(0);
@@ -80,6 +82,8 @@ void Animation::update() {
                 card->cardRect.width += 2;
                 card->cardRect.x -= 1;
                 card->cardRect.y -= 1;
+            } else if (this->timer < this->keyFrames[2]) {
+                card->cardRect.height = 0;
             } else {
                 this->hasEnded = true;
             }
@@ -90,5 +94,13 @@ void Animation::update() {
 }
 
 void Animation::draw() {
-    
+    switch(this->type) {
+        case AnimationType::Death: {
+            // Explosion animation
+            if (this->timer >= this->keyFrames[1] && this->timer < this->keyFrames[2]) {
+                DrawCircleLinesV(*this->points.at(0), 20 + (this->timer - this->keyFrames[1]) * 2, RAYWHITE);
+            }
+            break;
+        }
+    }
 }
