@@ -51,9 +51,9 @@ void Animation::update() {
                 int frames = this->keyFrames[1] - this->keyFrames[0];
                 int yDifference = attacker->cardRect.y - life->y;
                 int xDifference = attacker->cardRect.x - life->x;
-                attacker->cardRect.y -= yDifference / frames;
-                attacker->cardRect.x -= xDifference / frames;
-            } else if (this->timer < this->keyFrames[3]) {
+                attacker->cardRect.y -= yDifference / (frames - 1);
+                attacker->cardRect.x -= xDifference / (frames - 1);
+            } else if (this->timer < this->keyFrames[2]) {
                 attacker->cardRect.y += 5;
             } else {
                 attacker->cardRect.x = attacker->pos_lock.x;

@@ -43,6 +43,8 @@ void Card::draw() {
             break;
         }
         case CardStates::zone: {
+            Rectangle shadow(this->cardRect.x + 15, this->cardRect.y + 15, this->cardRect.width, this->cardRect.height);
+            DrawRectangleRec(shadow, Color{0, 0, 0, 100});
             if (this->isPlayerCard)
             {
                 DrawRectangleRec(this->cardRect, Color{0, 121, 241, 180});
@@ -52,6 +54,19 @@ void Card::draw() {
                 DrawRectangleRec(this->cardRect, Color{230, 41, 55, 180});
             }
             DrawText(this->name.c_str(), this->cardRect.x + 5, this->cardRect.y + 5, 12, WHITE);
+
+            switch (this->type)
+            {
+            case CardTypes::Sentient:
+            {
+                string pt = to_string(this->currentPower) + "/" + to_string(this->currentHealth);
+                DrawText(pt.c_str(), cardRect.x + cardRect.width/2, cardRect.y + cardRect.height - 15, 12, WHITE);
+                break;
+            }
+            default:
+                break;
+            }
+
             break;
         }
     }
