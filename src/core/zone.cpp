@@ -19,8 +19,6 @@ void Zone::addCard(Card *card) {
 
     card->pos_lock = Vector2(rect.x + lastIndex * (cardSize + gap) + zonePadding, rect.y + gap + zonePadding + yOffset);
     card->cardRect.width = card->cardRect.height = cardSize;
-    card->cardRect.x = card->pos_lock.x;
-    card->cardRect.y = card->pos_lock.y;
 }
 
 void Zone::setAttackersAndDefenders() {

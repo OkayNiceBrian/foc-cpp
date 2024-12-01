@@ -43,14 +43,14 @@ void Animation::update() {
             }
 
             Card *attacker = this->cards->at(0);
-            Rectangle *life = this->rects->at(0);
+            Rectangle life = this->rects->at(0);
 
             if (this->timer < this->keyFrames[0]) {
                 attacker->cardRect.y += 2;
             } else if (this->timer < this->keyFrames[1]) {
                 int frames = this->keyFrames[1] - this->keyFrames[0];
-                int yDifference = attacker->cardRect.y - life->y;
-                int xDifference = attacker->cardRect.x - life->x;
+                int yDifference = attacker->cardRect.y - life.y;
+                int xDifference = attacker->cardRect.x - life.x;
                 attacker->cardRect.y -= yDifference / (frames - 1);
                 attacker->cardRect.x -= xDifference / (frames - 1);
             } else if (this->timer < this->keyFrames[2]) {
@@ -67,7 +67,7 @@ void Animation::update() {
                 this->keyFrames.push_back(30);
                 this->keyFrames.push_back(40);
                 this->keyFrames.push_back(55);
-                this->points.push_back(new Vector2{this->cards->at(0)->cardRect.x + this->cards->at(0)->cardRect.width / 2, this->cards->at(0)->cardRect.y + this->cards->at(0)->cardRect.height / 2});
+                this->points->push_back(Vector2{this->cards->at(0)->cardRect.x + this->cards->at(0)->cardRect.width / 2, this->cards->at(0)->cardRect.y + this->cards->at(0)->cardRect.height / 2});
             }
 
             Card* card = this->cards->at(0);
@@ -89,6 +89,42 @@ void Animation::update() {
             }
             break;
         }
+        case AnimationType::Rotation: {
+            if (this->timer == 0) {
+                this->keyFrames.push_back(10); // Windup
+                this->keyFrames.push_back(60); // Rotate
+                this->keyFrames.push_back(10); // Recoil
+                for (int i = 0; i < this->cards->size(); i++) {
+                    Card *card = this->cards->at(i);
+                    Rectangle rect = this->rects->at(i);
+                    card->cardRect.x = rect.x;
+                    card->cardRect.y = rect.y;
+                }
+            }
+
+            if (this->timer < this->keyFrames[0]) {
+                for (Card *card : *this->cards) {
+                    card->cardRect.x += 1;
+                    card->cardRect.y += 1;
+                }
+            } else if (this->timer < this->keyFrames[1]) {
+                for (int i = 0; i < this->cards->size(); i++) {
+                    Card *card = this->cards->at(i);
+                    Vector2 post = this->points->at(i);
+                    card->cardRect.x += (post.x - card->cardRect.x) / 2;
+                    card->cardRect.y += (post.y - card->cardRect.y) / 2;
+                }
+            } else if (this->timer < this->keyFrames[2]) {
+                // Do nothing
+            } else {
+                for (Card *card : *this->cards) {
+                    card->cardRect.x = card->pos_lock.x;
+                    card->cardRect.y = card->pos_lock.y;
+                }
+                this->hasEnded = true;
+            }
+            break;
+        }
     }
     this->timer++;
 }
@@ -98,7 +134,7 @@ void Animation::draw() {
         case AnimationType::Death: {
             // Explosion animation
             if (this->timer >= this->keyFrames[1] && this->timer < this->keyFrames[2]) {
-                DrawCircleLinesV(*this->points.at(0), 20 + (this->timer - this->keyFrames[1]) * 2, RAYWHITE);
+                DrawCircleLinesV(this->points->at(0), 20 + (this->timer - this->keyFrames[1]) * 2, RAYWHITE);
             }
             break;
         }

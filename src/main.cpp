@@ -27,6 +27,7 @@ enum GameState {
 enum Phase
 {
     Rotate,
+    Draw,
     Play,
 };
 
@@ -189,7 +190,7 @@ int main()
                             opponentHealth -= attackingCard->currentPower;
                             attackingZone->attackers.remove(attackingCard);
                             stopAttacking(&isCardAttacking, attackingCard, attackingZone);
-                            animations.push_back(new Animation(AnimationType::AttackPlayer, new vector<Card*>{attackingCard}, new vector<Rectangle*>{&opponentHealthRect}));
+                            animations.push_back(new Animation(AnimationType::AttackPlayer, new vector<Card*>{attackingCard}, new vector<Rectangle>{opponentHealthRect}));
                         }
                     } else {
                         Card *toRemove;
@@ -251,6 +252,8 @@ int main()
                                 }
                                 }
                                 playedCards.push_back(heldCard);
+                                heldCard->cardRect.x = heldCard->pos_lock.x;
+                                heldCard->cardRect.y = heldCard->pos_lock.y;
                                 energy -= heldCard->currentCost;
                                 repositionHand(&hand);
                             }
@@ -283,9 +286,26 @@ int main()
                     energy = turnNum + (turnNum % 2);
 
                     // ==== Rotate ====
+                    vector<Rectangle> *preLock = new vector<Rectangle>{};
+                    for (Card* card : playedCards) {
+                        if (isPlayerTurn == card->isPlayerCard) {
+                            preLock->push_back(card->cardRect);
+                        }
+                    }
                     rotateCards(zones, isPlayerTurn);
-
-                    // ==== Draw ====
+                    vector<Vector2> *postLock = new vector<Vector2>;
+                    vector<Card*> *cards = new vector<Card*>;
+                    for (Card* card : playedCards) {
+                        if (isPlayerTurn == card->isPlayerCard) {
+                            postLock->push_back(card->pos_lock);
+                            cards->push_back(card);
+                        }
+                    }
+                    animations.push_back(new Animation(AnimationType::Rotation, cards, preLock, postLock));
+                }
+                break;
+                case Phase::Draw: {
+                     // ==== Draw ====
                     if (isPlayerTurn)
                     {
                         drawCard(&hand, &p1Deck);
@@ -327,6 +347,8 @@ int main()
                         {
                             Card *card = new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::zone);
                             opponentZones[oppZone]->addCard(card);
+                            card->cardRect.x = card->pos_lock.x;
+                            card->cardRect.y = card->pos_lock.y;
                             playedCards.push_back(card);
                         }
                         endTurn(&isPlayerTurn, &phase);
@@ -354,6 +376,10 @@ int main()
                             playedCards.remove(card);
                             card->state = CardStates::discard;
                         }
+                    }
+                    // If rotation has finished, move on to draw
+                    if (animation->type == AnimationType::Rotation && animation->hasEnded) {
+                        phase = Phase::Draw;
                     }
                 }
                 break;
@@ -560,6 +586,10 @@ int main()
             }
             for (Animation *animation : toRemove) {
                 animations.remove(animation);
+                delete animation->rects;
+                delete animation->points;
+                delete animation->cards;
+                
                 delete(animation);
             }
 

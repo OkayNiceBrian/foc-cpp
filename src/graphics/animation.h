@@ -7,14 +7,15 @@
 enum AnimationType {
     Attack,
     AttackPlayer,
-    Death
+    Death,
+    Rotation
 };
 
 struct Animation {
     AnimationType type;
-    std::vector<Card*> *cards;
-    std::vector<Rectangle*> *rects;
-    std::vector<Vector2*> points;
+    std::vector<Card*> *cards = new std::vector<Card*>{};
+    std::vector<Rectangle> *rects = new std::vector<Rectangle>{};
+    std::vector<Vector2> *points = new std::vector<Vector2>{};
     int timer = 0;
     std::vector<int> keyFrames;
     bool hasEnded = false;
