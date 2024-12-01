@@ -199,6 +199,7 @@ int main()
                                 toRemove = defender;
                                 defender->takeDamage(attackingCard->currentPower, attackingZone);
                                 attackingCard->takeDamage(defender->currentPower, attackingZone);
+                                attackingZone->attackers.remove(attackingCard);
                                 stopAttacking(&isCardAttacking, attackingCard, attackingZone);
                                 animations.push_back(new Animation(AnimationType::Attack, new vector<Card*>{attackingCard, defender}));
                             }
