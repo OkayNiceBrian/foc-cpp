@@ -21,6 +21,7 @@ void Card::draw() {
     switch(this->state) {
 
         case CardStates::hand: {
+            if (this->cardRect.height <= 0 || this->cardRect.width <= 0) break;
             Rectangle cardRect = this->cardRect;
 
             DrawRectangleRec(cardRect, GRAY);
@@ -43,6 +44,7 @@ void Card::draw() {
             break;
         }
         case CardStates::zone: {
+            if (this->cardRect.height <= 0 || this->cardRect.width <= 0) break;
             Rectangle shadow(this->cardRect.x + 15, this->cardRect.y + 15, this->cardRect.width, this->cardRect.height);
             DrawRectangleRec(shadow, Color{0, 0, 0, 100});
             if (this->isPlayerCard)
