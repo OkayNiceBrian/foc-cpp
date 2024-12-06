@@ -53,6 +53,10 @@ void Animation::update() {
                 int xDifference = attacker->cardRect.x - life.x;
                 attacker->cardRect.y -= yDifference / (frames - 1);
                 attacker->cardRect.x -= xDifference / (frames - 1);
+                if (this->timer == this->keyFrames[1] - 1) {
+                    attacker->cardRect.y = life.y + 10;
+                    attacker->cardRect.x = life.x + 10;
+                }
             } else if (this->timer < this->keyFrames[2]) {
                 attacker->cardRect.y += 5;
             } else {
