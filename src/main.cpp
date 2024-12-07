@@ -19,7 +19,8 @@
 
 using namespace std;
 
-enum GameState {
+enum GameState
+{
     Free,
     Animating
 };
@@ -59,9 +60,9 @@ int main()
     int energy = turnNum * 2;
     Phase phase = Phase::Play;
 
-    list<Animation*> animations;
-    queue<Animation*> animationQueue;
-    vector<Animation*> idleAnimations;
+    list<Animation *> animations;
+    queue<Animation *> animationQueue;
+    vector<Animation *> idleAnimations;
 
     bool isHoveringHandCard = false;
     Card *hoveredHandCard;
@@ -96,6 +97,18 @@ int main()
     Rectangle playerHealthRect = {0, pHealthY, healthSize, healthSize};
     Rectangle opponentHealthRect = {0, oHealthY, healthSize, healthSize};
 
+    // Deck/Discard Sizing info
+    float deckHeight = screenWidth / 12;
+    float rightSideX = screenWidth - screenWidth / 11;
+    float oDiscY = screenHeight / 4 - screenHeight / 8 - deckHeight/2;
+    float oDeckY = screenHeight / 2 - screenHeight / 8 - deckHeight/2;
+    float pDeckY = screenHeight / 2 + screenHeight / 8 - deckHeight/2;
+    float pDiscY = screenHeight * 3 / 4 + screenHeight / 8 - deckHeight/2;
+    Rectangle playerDeckRect = {rightSideX, pDeckY, deckHeight, deckHeight};
+    Rectangle playerDiscardRect = {rightSideX, pDiscY, deckHeight, deckHeight};
+    Rectangle opponentDeckRect = {rightSideX, oDeckY, deckHeight, deckHeight};
+    Rectangle opponentDiscardRect = {rightSideX, oDiscY, deckHeight, deckHeight};
+
     // Setup Zones
     Zone *zones[4] = {
         new Zone{true, Zones::Zone1},
@@ -127,20 +140,25 @@ int main()
     }
 
     // Setup Deck and shuffle
-    vector<Card *> p1Deck;
-    copy(begin(p1DeckInfo.cards), end(p1DeckInfo.cards), back_inserter(p1Deck));
-    shuffleDeck(&p1Deck);
+    vector<Card *> playerDeck;
+    copy(begin(p1DeckInfo.cards), end(p1DeckInfo.cards), back_inserter(playerDeck));
+    shuffleDeck(&playerDeck);
+    int opponentDeckCount = 15;
+
+    // Setup discard
+    list<Card *> playerDiscard;
+    list<Card *> opponentDiscard;
 
     // Played Cards
-    list<Card*> playedCards;
+    list<Card *> playedCards;
 
     // Setup Player1's hand
     vector<Card *> hand; // Consider using std::list instead of vector because of frequent insertions/deletions
     int startingHandSize = 5;
     for (int i = 0; i < startingHandSize; i++)
     {
-        Card *card = p1Deck.front();
-        p1Deck.erase(p1Deck.begin());
+        Card *card = playerDeck.front();
+        playerDeck.erase(playerDeck.begin());
         hand.push_back(card);
         card->cardRect.width = handCard_width;
         card->cardRect.height = handCard_height;
@@ -172,11 +190,16 @@ int main()
             }
 
             // Handle attacking logic
-            if (isPlayerTurn && phase == Phase::Play) {
-                if (!isCardAttacking) {
-                    for (Zone *zone : opponentZones) {
-                        for (Card *card : zone->attackers) {
-                            if (CheckCollisionPointRec(GetMousePosition(), card->cardRect)) {
+            if (isPlayerTurn && phase == Phase::Play)
+            {
+                if (!isCardAttacking)
+                {
+                    for (Zone *zone : opponentZones)
+                    {
+                        for (Card *card : zone->attackers)
+                        {
+                            if (CheckCollisionPointRec(GetMousePosition(), card->cardRect))
+                            {
                                 isCardAttacking = true;
                                 attackingCard = card;
                                 attackingCardOrigin = {card->cardRect.x + card->cardRect.width / 2, card->cardRect.y + card->cardRect.height / 2};
@@ -184,24 +207,32 @@ int main()
                             }
                         }
                     }
-                } else {
-                    if (attackingZone->defenders.size() <= 0) {
-                        if (CheckCollisionPointRec(GetMousePosition(), opponentHealthRect)) {
+                }
+                else
+                {
+                    if (attackingZone->defenders.size() <= 0)
+                    {
+                        if (CheckCollisionPointRec(GetMousePosition(), opponentHealthRect))
+                        {
                             opponentHealth -= attackingCard->currentPower;
                             attackingZone->attackers.remove(attackingCard);
                             stopAttacking(&isCardAttacking, attackingCard, attackingZone);
-                            animations.push_back(new Animation(AnimationType::AttackPlayer, new vector<Card*>{attackingCard}, new vector<Rectangle>{opponentHealthRect}));
+                            animations.push_back(new Animation(AnimationType::AttackPlayer, new vector<Card *>{attackingCard}, new vector<Rectangle>{opponentHealthRect}));
                         }
-                    } else {
+                    }
+                    else
+                    {
                         Card *toRemove;
-                        for (Card *defender : attackingZone->defenders) {
-                            if (CheckCollisionPointRec(GetMousePosition(), defender->cardRect)) {
+                        for (Card *defender : attackingZone->defenders)
+                        {
+                            if (CheckCollisionPointRec(GetMousePosition(), defender->cardRect))
+                            {
                                 toRemove = defender;
                                 defender->takeDamage(attackingCard->currentPower, attackingZone);
                                 attackingCard->takeDamage(defender->currentPower, attackingZone);
                                 attackingZone->attackers.remove(attackingCard);
                                 stopAttacking(&isCardAttacking, attackingCard, attackingZone);
-                                animations.push_back(new Animation(AnimationType::Attack, new vector<Card*>{attackingCard, defender}));
+                                animations.push_back(new Animation(AnimationType::Attack, new vector<Card *>{attackingCard, defender}));
                             }
                         }
                         attackingZone->defenders.remove(toRemove);
@@ -220,7 +251,8 @@ int main()
                 heldCard = 0;
             }
 
-            if (isCardAttacking) {
+            if (isCardAttacking)
+            {
                 stopAttacking(&isCardAttacking, attackingCard, attackingZone);
             }
         }
@@ -272,121 +304,143 @@ int main()
         // ====================================================================
         // ============================== UPDATE ==============================
         // ====================================================================
-        if (animations.size() > 0) {
+        if (animations.size() > 0)
+        {
             gameState = GameState::Animating;
         }
-        switch(gameState) {
-            case GameState::Free: {
-                switch (phase)
-                {
-                // =============================== Rotate ==========================================
-                case Phase::Rotate:
-                {
-                    // Increment the turn and set the energy
-                    turnNum++;
-                    energy = turnNum + (turnNum % 2);
+        switch (gameState)
+        {
+        case GameState::Free:
+        {
+            switch (phase)
+            {
+            // =============================== Rotate ==========================================
+            case Phase::Rotate:
+            {
+                // Increment the turn and set the energy
+                turnNum++;
+                energy = turnNum + (turnNum % 2);
 
-                    // ==== Rotate ====
-                    vector<Rectangle> *preLock = new vector<Rectangle>{};
-                    for (Card* card : playedCards) {
-                        if (isPlayerTurn == card->isPlayerCard) {
-                            preLock->push_back(card->cardRect);
-                        }
+                // ==== Rotate ====
+                vector<Rectangle> *preLock = new vector<Rectangle>{};
+                for (Card *card : playedCards)
+                {
+                    if (isPlayerTurn == card->isPlayerCard)
+                    {
+                        preLock->push_back(card->cardRect);
                     }
-                    rotateCards(zones, isPlayerTurn);
-                    vector<Vector2> *postLock = new vector<Vector2>;
-                    vector<Card*> *cards = new vector<Card*>;
-                    for (Card* card : playedCards) {
-                        if (isPlayerTurn == card->isPlayerCard) {
-                            postLock->push_back(card->pos_lock);
-                            cards->push_back(card);
-                        }
-                    }
-                    animations.push_back(new Animation(AnimationType::Rotation, cards, preLock, postLock));
                 }
-                break;
-                case Phase::Draw: {
-                     // ==== Draw ====
-                    if (isPlayerTurn)
-                    {
-                        drawCard(&hand, &p1Deck);
-
-                        for (Zone *zone : opponentZones) {
-                            zone->setAttackersAndDefenders();
-                        }
-                    }
-
-                    // ==== Next Phase ====
-                    phase = Phase::Play;
-                }
-                break;
-                // =============================== Play ============================================
-                case Phase::Play:
+                rotateCards(zones, isPlayerTurn);
+                vector<Vector2> *postLock = new vector<Vector2>;
+                vector<Card *> *cards = new vector<Card *>;
+                for (Card *card : playedCards)
                 {
-                    if (isPlayerTurn)
+                    if (isPlayerTurn == card->isPlayerCard)
                     {
-                        // Check if player's turn is over.
-                        int lowestCost = INT32_MAX;
-                        for (Card *card : hand)
+                        postLock->push_back(card->pos_lock);
+                        cards->push_back(card);
+                    }
+                }
+                animations.push_back(new Animation(AnimationType::Rotation, cards, preLock, postLock));
+            }
+            break;
+            case Phase::Draw:
+            {
+                // ==== Draw ====
+                if (isPlayerTurn)
+                {
+                    drawCard(&hand, &playerDeck);
+
+                    for (Zone *zone : opponentZones)
+                    {
+                        zone->setAttackersAndDefenders();
+                    }
+                }
+
+                // ==== Next Phase ====
+                phase = Phase::Play;
+            }
+            break;
+            // =============================== Play ============================================
+            case Phase::Play:
+            {
+                if (isPlayerTurn)
+                {
+                    // Check if player's turn is over.
+                    int lowestCost = INT32_MAX;
+                    for (Card *card : hand)
+                    {
+                        if (card->currentCost < lowestCost)
                         {
-                            if (card->currentCost < lowestCost)
-                            {
-                                lowestCost = card->currentCost;
-                            }
-                        }
-                        if (energy < lowestCost)
-                        {
-                            endTurn(&isPlayerTurn, &phase);
+                            lowestCost = card->currentCost;
                         }
                     }
-                    else if (!isPlayerTurn)
+                    if (energy < lowestCost)
                     {
-                        // If Opponent turn, randomly play cards to a random zone and end turn
-                        int cardCount = GetRandomValue(1, 2);
-                        int oppZone = GetRandomValue(0, 1);
-                        for (int i = 0; i < cardCount; i++)
-                        {
-                            Card *card = new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::zone);
-                            opponentZones[oppZone]->addCard(card);
-                            card->cardRect.x = card->pos_lock.x;
-                            card->cardRect.y = card->pos_lock.y;
-                            playedCards.push_back(card);
-                        }
                         endTurn(&isPlayerTurn, &phase);
                     }
                 }
-                break;
+                else if (!isPlayerTurn)
+                {
+                    // If Opponent turn, randomly play cards to a random zone and end turn
+                    int cardCount = GetRandomValue(1, 2);
+                    int oppZone = GetRandomValue(0, 1);
+                    for (int i = 0; i < cardCount; i++)
+                    {
+                        Card *card = new Card("Virgo", "I'm a what?", 2, CardTypes::Sentient, 20, 20, false, CardStates::zone);
+                        opponentZones[oppZone]->addCard(card);
+                        card->cardRect.x = card->pos_lock.x;
+                        card->cardRect.y = card->pos_lock.y;
+                        playedCards.push_back(card);
+                        opponentDeckCount--;
+                    }
+                    endTurn(&isPlayerTurn, &phase);
                 }
-                break;
             }
-            case GameState::Animating: {
-                for (Animation *animation : animations) {
-                    animation->update();
-
-                    // If an attack animation has finished and cards are dead, start death animation
-                    if (animation->type == AnimationType::Attack && animation->hasEnded) {
-                        for (Card *card : *animation->cards) {
-                            if (card->currentHealth <= 0) {
-                                animations.push_back(new Animation(AnimationType::Death, new vector<Card*>{card}));
-                            }
-                        }
-                    }
-                    // If a death animation has finished, remove from playedCards
-                    if (animation->type == AnimationType::Death && animation->hasEnded) {
-                        for (Card *card : *animation->cards) {
-                            playedCards.remove(card);
-                            card->state = CardStates::discard;
-                        }
-                    }
-                    // If rotation has finished, move on to draw
-                    if (animation->type == AnimationType::Rotation && animation->hasEnded) {
-                        phase = Phase::Draw;
-                    }
-                }
-                break;
+            break;
             }
+            break;
         }
-        
+        case GameState::Animating:
+        {
+            for (Animation *animation : animations)
+            {
+                animation->update();
+
+                // If an attack animation has finished and cards are dead, start death animation
+                if (animation->type == AnimationType::Attack && animation->hasEnded)
+                {
+                    for (Card *card : *animation->cards)
+                    {
+                        if (card->currentHealth <= 0)
+                        {
+                            animations.push_back(new Animation(AnimationType::Death, new vector<Card *>{card}));
+                        }
+                    }
+                }
+                // If a death animation has finished, remove from playedCards
+                if (animation->type == AnimationType::Death && animation->hasEnded)
+                {
+                    for (Card *card : *animation->cards)
+                    {
+                        playedCards.remove(card);
+                        if (card->isPlayerCard) {
+                            playerDiscard.push_back(card);
+                        } else {
+                            opponentDiscard.push_back(card);
+                        }
+                        card->state = CardStates::discard;
+                    }
+                }
+                // If rotation has finished, move on to draw
+                if (animation->type == AnimationType::Rotation && animation->hasEnded)
+                {
+                    phase = Phase::Draw;
+                }
+            }
+            break;
+        }
+        }
 
         // =============================== All Phases ======================================
         if (holdingCard)
@@ -485,8 +539,25 @@ int main()
             DrawRectangleRec(zone->rect, zone->color);
         }
 
+        // Draw Decks
+        DrawRectangleRec(playerDeckRect, BLUE);
+        DrawText(to_string(playerDeck.size()).c_str(), playerDeckRect.x + 20, playerDeckRect.y + 20, 24, WHITE);
+        DrawRectangleRec(opponentDeckRect, RED);
+        DrawText(to_string(opponentDeckCount).c_str(), opponentDeckRect.x + 20, opponentDeckRect.y + 20, 24, WHITE);
+
+        // Draw Discards
+        DrawRectangleRec(playerDiscardRect, GRAY);
+        if (playerDiscard.size() > 0) {
+            DrawText(playerDiscard.back()->name.c_str(), playerDiscardRect.x + 20, playerDiscardRect.y + 20, 24, WHITE);
+        }
+        DrawRectangleRec(opponentDiscardRect, GRAY);
+        if (opponentDiscard.size() > 0) {
+            DrawText(opponentDiscard.back()->name.c_str(), opponentDiscardRect.x + 20, opponentDiscardRect.y + 20, 24, WHITE);
+        }
+
         // Draw played cards
-        for (Card *card : playedCards) {
+        for (Card *card : playedCards)
+        {
             card->draw();
         }
 
@@ -505,8 +576,8 @@ int main()
         DrawText(to_string(energy).c_str(), screenWidth / 2 - tw / 2, screenHeight / 2 - 5 * tw / 6, 36, RAYWHITE);
 
         // Draw Health
-        Color pHealthColor = Color { 100, 0, 250, 100 };
-        Color oHealthColor = Color { 250, 0, 100, 100 };
+        Color pHealthColor = Color{100, 0, 250, 100};
+        Color oHealthColor = Color{250, 0, 100, 100};
         DrawRectangleRec(opponentHealthRect, oHealthColor);
         DrawText(to_string(opponentHealth).c_str(), 0, oHealthY, 36, WHITE);
         DrawRectangleRec(playerHealthRect, pHealthColor);
@@ -572,30 +643,36 @@ int main()
             }
         }
 
-        if (isCardAttacking) {
+        if (isCardAttacking)
+        {
             DrawLineBezier(GetMousePosition(), attackingCardOrigin, 1.0, WHITE);
         }
 
-        if (gameState == GameState::Animating) {
+        if (gameState == GameState::Animating)
+        {
             // Remove finished animations
-            vector<Animation*> toRemove;
-            for (Animation* animation : animations) {
+            vector<Animation *> toRemove;
+            for (Animation *animation : animations)
+            {
                 animation->draw();
-                if (animation->hasEnded) {
+                if (animation->hasEnded)
+                {
                     toRemove.push_back(animation);
                 }
             }
-            for (Animation *animation : toRemove) {
+            for (Animation *animation : toRemove)
+            {
                 animations.remove(animation);
                 delete animation->rects;
                 delete animation->points;
                 delete animation->cards;
-                
-                delete(animation);
+
+                delete (animation);
             }
 
             // Switch game state if no more animations
-            if (animations.size() == 0) {
+            if (animations.size() == 0)
+            {
                 gameState = GameState::Free;
             }
         }
@@ -693,7 +770,8 @@ void rotateCards(Zone *zones[], bool isPlayerTurn)
     tempZone.cards.clear();
 }
 
-void stopAttacking(bool *isCardAttacking, Card *attackingCard, Zone* attackingZone) {
+void stopAttacking(bool *isCardAttacking, Card *attackingCard, Zone *attackingZone)
+{
     *isCardAttacking = false;
     attackingCard = 0;
     attackingZone = 0;
